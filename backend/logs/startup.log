@@ -1,0 +1,707 @@
+11:32:39,668 |-INFO in ch.qos.logback.classic.LoggerContext[default] - This is logback-classic version 1.4.11
+11:32:39,674 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Here is a list of configurators discovered as a service, by rank: 
+11:32:39,674 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 -   org.springframework.boot.logging.logback.RootLogLevelConfigurator
+11:32:39,674 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - They will be invoked in order until ExecutionStatus.DO_NOT_INVOKE_NEXT_IF_ANY is returned.
+11:32:39,674 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Constructed configurator of type class org.springframework.boot.logging.logback.RootLogLevelConfigurator
+11:32:39,679 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - org.springframework.boot.logging.logback.RootLogLevelConfigurator.configure() call lasted 1 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+11:32:39,679 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Trying to configure with ch.qos.logback.classic.joran.SerializedModelConfigurator
+11:32:39,680 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Constructed configurator of type class ch.qos.logback.classic.joran.SerializedModelConfigurator
+11:32:39,698 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.scmo]
+11:32:39,699 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.scmo]
+11:32:39,699 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - ch.qos.logback.classic.joran.SerializedModelConfigurator.configure() call lasted 19 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+11:32:39,699 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Trying to configure with ch.qos.logback.classic.util.DefaultJoranConfigurator
+11:32:39,700 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Constructed configurator of type class ch.qos.logback.classic.util.DefaultJoranConfigurator
+11:32:39,701 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+11:32:39,702 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.xml]
+11:32:39,702 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - ch.qos.logback.classic.util.DefaultJoranConfigurator.configure() call lasted 2 milliseconds. ExecutionStatus=INVOKE_NEXT_IF_ANY
+11:32:39,702 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Trying to configure with ch.qos.logback.classic.BasicConfigurator
+11:32:39,704 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - Constructed configurator of type class ch.qos.logback.classic.BasicConfigurator
+11:32:39,704 |-INFO in ch.qos.logback.classic.BasicConfigurator@aa22f1c - Setting up default configuration.
+11:32:39,720 |-INFO in ch.qos.logback.classic.util.ContextInitializer@1b9ea3e3 - ch.qos.logback.classic.BasicConfigurator.configure() call lasted 16 milliseconds. ExecutionStatus=NEUTRAL
+11:32:40,337 |-INFO in ch.qos.logback.core.joran.spi.ConfigurationWatchList@55e7a35c - URL [jar:nested:/Users/cjbester/git/Integrix Solutions/Integrixs-Host-2-Host/backend/target/backend-1.0.0-SNAPSHOT.jar/!BOOT-INF/classes/!/logback-spring.xml] is not of type file
+11:32:40,458 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [CONSOLE]
+11:32:40,458 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+11:32:40,463 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+11:32:40,482 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [APPLICATION_FILE]
+11:32:40,482 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+11:32:40,492 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@936219350 - setting totalSizeCap to 3 GB
+11:32:40,496 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@936219350 - Archive files will be limited to [100 MB] each.
+11:32:40,499 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@936219350 - Will use gz compression
+11:32:40,501 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@936219350 - Will use the pattern logs/backup/application.%d{yyyy-MM-dd}.%i for the active file
+11:32:40,522 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5922ae77 - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/backup/application.%d{yyyy-MM-dd}.%i.gz'.
+11:32:40,522 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5922ae77 - Roll-over at midnight.
+11:32:40,530 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5922ae77 - Setting initial period to 2025-12-29T09:04:59.692Z
+11:32:40,533 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+11:32:40,536 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[APPLICATION_FILE] - Active log file name: logs/application.log
+11:32:40,536 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[APPLICATION_FILE] - File property is set to [logs/application.log]
+11:32:40,538 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [ERROR_FILE]
+11:32:40,538 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+11:32:40,540 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1113829504 - setting totalSizeCap to 2 GB
+11:32:40,541 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1113829504 - Archive files will be limited to [50 MB] each.
+11:32:40,541 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1113829504 - Will use gz compression
+11:32:40,541 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1113829504 - Will use the pattern logs/backup/h2h-backend-error.%d{yyyy-MM-dd}.%i for the active file
+11:32:40,542 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2af616d3 - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/backup/h2h-backend-error.%d{yyyy-MM-dd}.%i.gz'.
+11:32:40,542 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2af616d3 - Roll-over at midnight.
+11:32:40,543 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@2af616d3 - Setting initial period to 2025-12-29T09:02:42.281Z
+11:32:40,544 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+11:32:40,545 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[ERROR_FILE] - Active log file name: logs/h2h-backend-error.log
+11:32:40,545 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[ERROR_FILE] - File property is set to [logs/h2h-backend-error.log]
+11:32:40,545 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [TRANSACTION_FILE]
+11:32:40,545 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+11:32:40,546 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1911978617 - setting totalSizeCap to 5 GB
+11:32:40,547 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1911978617 - Archive files will be limited to [100 MB] each.
+11:32:40,547 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1911978617 - Will use gz compression
+11:32:40,547 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1911978617 - Will use the pattern logs/backup/transactions.%d{yyyy-MM-dd}.%i for the active file
+11:32:40,548 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3deb2326 - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/backup/transactions.%d{yyyy-MM-dd}.%i.gz'.
+11:32:40,548 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3deb2326 - Roll-over at midnight.
+11:32:40,548 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@3deb2326 - Setting initial period to 2025-12-29T09:04:59.692Z
+11:32:40,549 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+11:32:40,551 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[TRANSACTION_FILE] - Active log file name: logs/transactions.log
+11:32:40,551 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[TRANSACTION_FILE] - File property is set to [logs/transactions.log]
+11:32:40,551 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [TRANSACTION_DB]
+11:32:40,551 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [com.integrixs.backend.logging.TransactionLogAppender]
+11:32:40,693 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [ADAPTER_FILE]
+11:32:40,693 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+11:32:40,695 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1658020779 - setting totalSizeCap to 3 GB
+11:32:40,695 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1658020779 - Archive files will be limited to [100 MB] each.
+11:32:40,696 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1658020779 - Will use gz compression
+11:32:40,696 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@1658020779 - Will use the pattern logs/backup/h2h-adapter-execution.%d{yyyy-MM-dd}.%i for the active file
+11:32:40,696 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7889a1ac - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/backup/h2h-adapter-execution.%d{yyyy-MM-dd}.%i.gz'.
+11:32:40,696 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7889a1ac - Roll-over at midnight.
+11:32:40,697 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@7889a1ac - Setting initial period to 2025-12-22T11:01:47.327Z
+11:32:40,698 |-INFO in ch.qos.logback.core.model.processor.ImplicitModelHandler - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+11:32:40,699 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[ADAPTER_FILE] - Active log file name: logs/h2h-adapter-execution.log
+11:32:40,699 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[ADAPTER_FILE] - File property is set to [logs/h2h-adapter-execution.log]
+11:32:40,699 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [FLOW_FILE]
+11:32:40,699 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+11:32:40,700 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@988690806 - setting totalSizeCap to 3 GB
+11:32:40,700 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@988690806 - Archive files will be limited to [100 MB] each.
+11:32:40,700 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@988690806 - Will use gz compression
+11:32:40,700 |-INFO in c.q.l.core.rolling.SizeAndTimeBasedRollingPolicy@988690806 - Will use the pattern logs/backup/h2h-flow-execution.%d{yyyy-MM-dd}.%i for the active file
+11:32:40,701 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5ef8df1e - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/backup/h2h-flow-execution.%d{yyyy-MM-dd}.%i.gz'.
+11:32:40,701 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5ef8df1e - Roll-over at midnight.
+11:32:40,701 |-INFO in ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP@5ef8df1e - Setting initial period to 2025-12-22T11:01:47.330Z
+11:32:40,703 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FLOW_FILE] - Active log file name: logs/h2h-flow-execution.log
+11:32:40,703 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FLOW_FILE] - File property is set to [logs/h2h-flow-execution.log]
+11:32:40,704 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [BUSINESS_FLOW_FILE] not referenced. Skipping further processing.
+11:32:40,704 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - Processing appender named [DATABASE]
+11:32:40,704 |-INFO in ch.qos.logback.core.model.processor.AppenderModelHandler - About to instantiate appender of type [com.integrixs.backend.logging.DatabaseLogAppender]
+11:32:40,706 |-INFO in ch.qos.logback.classic.model.processor.RootLoggerModelHandler - Setting level of ROOT logger to INFO
+11:32:40,706 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[ROOT] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [APPLICATION_FILE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_FILE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_DB] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [ERROR_FILE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [ADAPTER_FILE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [FLOW_FILE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [DATABASE] to Logger[ROOT]
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.springframework] to WARN
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating WARN level on Logger[org.springframework] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.apache] to WARN
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating WARN level on Logger[org.apache] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.hibernate] to WARN
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating WARN level on Logger[org.hibernate] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.zaxxer.hikari] to INFO
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[com.zaxxer.hikari] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs] to DEBUG
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs] onto the JUL framework
+11:32:40,707 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.backend.logging.H2HAuthenticationLogger] to DEBUG
+11:32:40,707 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.backend.logging.H2HAuthenticationLogger] onto the JUL framework
+11:32:40,709 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.backend.logging.H2HAuthenticationLogger] to false
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_FILE] to Logger[com.integrixs.backend.logging.H2HAuthenticationLogger]
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_DB] to Logger[com.integrixs.backend.logging.H2HAuthenticationLogger]
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[com.integrixs.backend.logging.H2HAuthenticationLogger]
+11:32:40,709 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.backend.security.AuthenticationEventListener] to DEBUG
+11:32:40,709 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.backend.security.AuthenticationEventListener] onto the JUL framework
+11:32:40,709 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.backend.security.AuthenticationEventListener] to false
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_FILE] to Logger[com.integrixs.backend.security.AuthenticationEventListener]
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_DB] to Logger[com.integrixs.backend.security.AuthenticationEventListener]
+11:32:40,709 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[com.integrixs.backend.security.AuthenticationEventListener]
+11:32:40,709 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.core.service.TransactionLogService] to DEBUG
+11:32:40,709 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.core.service.TransactionLogService] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.core.service.TransactionLogService] to false
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [APPLICATION_FILE] to Logger[com.integrixs.core.service.TransactionLogService]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[com.integrixs.core.service.TransactionLogService]
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.adapters] to DEBUG
+11:32:40,710 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.adapters] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.adapters] to false
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [ADAPTER_FILE] to Logger[com.integrixs.adapters]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_FILE] to Logger[com.integrixs.adapters]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_DB] to Logger[com.integrixs.adapters]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[com.integrixs.adapters]
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.flows] to DEBUG
+11:32:40,710 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.flows] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.flows] to false
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [FLOW_FILE] to Logger[com.integrixs.flows]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_FILE] to Logger[com.integrixs.flows]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [TRANSACTION_DB] to Logger[com.integrixs.flows]
+11:32:40,710 |-INFO in ch.qos.logback.core.model.processor.AppenderRefModelHandler - Attaching appender named [CONSOLE] to Logger[com.integrixs.flows]
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.springframework.security] to DEBUG
+11:32:40,710 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[org.springframework.security] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [org.springframework.security] to true
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.backend.security] to DEBUG
+11:32:40,710 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.backend.security] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.backend.security] to true
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.springframework.jdbc] to INFO
+11:32:40,710 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[org.springframework.jdbc] onto the JUL framework
+11:32:40,710 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [org.springframework.jdbc] to true
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.backend.repository] to DEBUG
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.backend.repository] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.backend.repository] to true
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.core.repository] to DEBUG
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating DEBUG level on Logger[com.integrixs.core.repository] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.core.repository] to true
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [com.integrixs.backend.aspect] to INFO
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[com.integrixs.backend.aspect] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting additivity of logger [com.integrixs.backend.aspect] to true
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.springframework.boot.autoconfigure] to ERROR
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating ERROR level on Logger[org.springframework.boot.autoconfigure] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.springframework.boot.diagnostics] to ERROR
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating ERROR level on Logger[org.springframework.boot.diagnostics] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.apache.catalina.startup] to INFO
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[org.apache.catalina.startup] onto the JUL framework
+11:32:40,711 |-INFO in ch.qos.logback.classic.model.processor.LoggerModelHandler - Setting level of logger [org.apache.coyote.http11.Http11Protocol] to INFO
+11:32:40,711 |-INFO in ch.qos.logback.classic.jul.LevelChangePropagator@27cf3151 - Propagating INFO level on Logger[org.apache.coyote.http11.Http11Protocol] onto the JUL framework
+11:32:40,712 |-INFO in ch.qos.logback.core.model.processor.DefaultProcessor@127e70c5 - End of configuration.
+11:32:40,712 |-INFO in org.springframework.boot.logging.logback.SpringBootJoranConfigurator@5910de75 - Registering current configuration as safe fallback point
+
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.0)
+
+11:32:40.870 [main] INFO  [] com.integrixs.H2HBackendApplication - Starting H2HBackendApplication using Java 17.0.12 with PID 51858 (/Users/cjbester/git/Integrix Solutions/Integrixs-Host-2-Host/backend/target/backend-1.0.0-SNAPSHOT.jar started by cjbester in /Users/cjbester/git/Integrix Solutions/Integrixs-Host-2-Host)
+11:32:40.874 [main] DEBUG [] com.integrixs.H2HBackendApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+11:32:40.875 [main] INFO  [] com.integrixs.H2HBackendApplication - The following 1 profile is active: "dev"
+11:32:43.632 [main] INFO  [] c.i.backend.security.JwtTokenService - JWT Token Service initialized with expiration: 86400000ms
+11:32:43.830 [main] INFO  [] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+11:32:44.003 [main] INFO  [] com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@8f6b4ab
+11:32:44.005 [main] INFO  [] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+11:32:44.112 [main] DEBUG [] c.i.b.s.JwtAuthenticationFilter - Filter 'jwtAuthenticationFilter' configured for use
+11:32:44.502 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Initializing Deployed Flow Scheduling Service...
+11:32:44.502 [main] DEBUG [] c.i.c.s.DeployedFlowSchedulingService - Loading existing running executions for concurrency tracking...
+11:32:44.521 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Loaded 0 running executions for concurrency tracking
+11:32:44.521 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Starting adapters for existing deployed flows...
+11:32:44.564 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Flow deployed, starting adapters for deployment: 3fa35bc2-9c64-4864-a4ce-d7b89809b9bc
+11:32:44.564 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Starting sender adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for deployment: 3fa35bc2-9c64-4864-a4ce-d7b89809b9bc
+11:32:44.575 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Starting sender adapter 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for deployment
+11:32:44.575 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduling sender adapter 0ad9315b-b01c-4f53-b0df-504ed5d823e2 with scheduler config: Daily - OnTime mode
+11:32:44.576 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduling OnTime execution for Daily at 20:27
+11:32:44.578 [DeployedFlow-Adapter-1] DEBUG [] c.i.c.s.DeployedFlowSchedulingService - Executing sender adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for flow: dee4aa4e-c33e-479b-a07d-e71b291a5a9e
+11:32:44.579 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:32:44.580 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Successfully started sender adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:32:44.581 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Configuring receiver adapter: ce6b502d-88e8-4a7e-95d0-d9932fa832f9 for deployment: 3fa35bc2-9c64-4864-a4ce-d7b89809b9bc
+11:32:44.583 [main] ERROR [] c.i.c.s.DeployedFlowSchedulingService - Failed to configure receiver adapter ce6b502d-88e8-4a7e-95d0-d9932fa832f9: Receiver adapter ce6b502d-88e8-4a7e-95d0-d9932fa832f9 is not STARTED (current: STOPPED) and cannot accept flow execution data
+java.lang.RuntimeException: Receiver adapter ce6b502d-88e8-4a7e-95d0-d9932fa832f9 is not STARTED (current: STOPPED) and cannot accept flow execution data
+	at com.integrixs.core.service.DeployedFlowSchedulingService.startReceiverAdapter(DeployedFlowSchedulingService.java:258)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.onFlowDeployed(DeployedFlowSchedulingService.java:94)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.startAdaptersForDeployedFlows(DeployedFlowSchedulingService.java:159)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.initialize(DeployedFlowSchedulingService.java:75)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleMethod.invoke(InitDestroyAnnotationBeanPostProcessor.java:457)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleMetadata.invokeInitMethods(InitDestroyAnnotationBeanPostProcessor.java:401)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor.postProcessBeforeInitialization(InitDestroyAnnotationBeanPostProcessor.java:219)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyBeanPostProcessorsBeforeInitialization(AbstractAutowireCapableBeanFactory.java:421)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1767)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:601)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1441)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1348)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:911)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:789)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:241)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1356)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1193)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:563)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:973)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:946)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:616)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:753)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:455)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:323)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1342)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1331)
+	at com.integrixs.H2HBackendApplication.main(H2HBackendApplication.java:25)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:91)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:53)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:58)
+11:32:44.587 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.factory.AdapterFactory - Creating adapter executor for type: FILE, direction: SENDER
+11:32:44.587 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.factory.AdapterFactory - Creating File Sender adapter executor
+11:32:44.588 [main] ERROR [] c.i.c.s.DeployedFlowSchedulingService - Failed to start adapters for deployed flow 3fa35bc2-9c64-4864-a4ce-d7b89809b9bc: Failed to configure receiver adapter
+java.lang.RuntimeException: Failed to configure receiver adapter
+	at com.integrixs.core.service.DeployedFlowSchedulingService.startReceiverAdapter(DeployedFlowSchedulingService.java:275)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.onFlowDeployed(DeployedFlowSchedulingService.java:94)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.startAdaptersForDeployedFlows(DeployedFlowSchedulingService.java:159)
+	at com.integrixs.core.service.DeployedFlowSchedulingService.initialize(DeployedFlowSchedulingService.java:75)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleMethod.invoke(InitDestroyAnnotationBeanPostProcessor.java:457)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor$LifecycleMetadata.invokeInitMethods(InitDestroyAnnotationBeanPostProcessor.java:401)
+	at org.springframework.beans.factory.annotation.InitDestroyAnnotationBeanPostProcessor.postProcessBeforeInitialization(InitDestroyAnnotationBeanPostProcessor.java:219)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyBeanPostProcessorsBeforeInitialization(AbstractAutowireCapableBeanFactory.java:421)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1767)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:601)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1441)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1348)
+	at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:911)
+	at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:789)
+	at org.springframework.beans.factory.support.ConstructorResolver.autowireConstructor(ConstructorResolver.java:241)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.autowireConstructor(AbstractAutowireCapableBeanFactory.java:1356)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1193)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:563)
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:523)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:325)
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:323)
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:199)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:973)
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:946)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:616)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:753)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:455)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:323)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1342)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1331)
+	at com.integrixs.H2HBackendApplication.main(H2HBackendApplication.java:25)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:91)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:53)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:58)
+Caused by: java.lang.RuntimeException: Receiver adapter ce6b502d-88e8-4a7e-95d0-d9932fa832f9 is not STARTED (current: STOPPED) and cannot accept flow execution data
+	at com.integrixs.core.service.DeployedFlowSchedulingService.startReceiverAdapter(DeployedFlowSchedulingService.java:258)
+	... 49 common frames omitted
+11:32:44.589 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:32:44.589 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Started adapters for 1 deployed flows
+11:32:44.589 [main] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Deployed Flow Scheduling Service initialized successfully
+11:32:44.589 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:32:44.590 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:32:44.591 [DeployedFlow-Adapter-1] DEBUG [] c.i.c.adapter.file.FileSenderAdapter - File sender configuration validation passed
+11:32:44.591 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil - === FILE SENDER Configuration Summary ===
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   fileType: Binary
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   filePattern: *.xml
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   pollInterval: 60
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   exclusionMask: 
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   retryInterval: 60
+11:32:44.592 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   processingMode: Archive
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   maximumFileSize: 104857600
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   sourceDirectory: /Users/cjbester/git/Test/dev/outbound/payments
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   archiveDirectory: /Users/cjbester/git/Test/dev/archive
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   archiveFileNaming: Timestamp
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   emptyFileHandling: Do Not Create Message
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   processingSequence: By Date
+11:32:44.593 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   createArchiveDirectory: true
+11:32:44.594 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil -   msecsToWaitBeforeModificationCheck: 0
+11:32:44.594 [DeployedFlow-Adapter-1] DEBUG [] c.i.core.util.AdapterConfigUtil - === End Configuration Summary ===
+11:32:44.594 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:32:44.594 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:32:44.594 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:32:44.595 [DeployedFlow-Adapter-1] DEBUG [] c.i.c.adapter.file.FileSenderAdapter - File sender configuration validation passed
+11:32:44.595 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:32:44.611 [DeployedFlow-Adapter-1] DEBUG [] com.integrixs.core.util.FileUtil - Found 0 files matching pattern '*.xml' in directory '/Users/cjbester/git/Test/dev/outbound/payments'
+11:32:44.611 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:32:44.612 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:32:44.612 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:32:44.613 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:32:44.613 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:32:44.614 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:32:44.614 [DeployedFlow-Adapter-1] DEBUG [] c.i.c.s.DeployedFlowSchedulingService - Sender adapter 0ad9315b-b01c-4f53-b0df-504ed5d823e2 found no data to process for flow: dee4aa4e-c33e-479b-a07d-e71b291a5a9e
+11:32:44.798 [main] INFO  [CORR-07DF5680] c.i.core.sftp.SftpConnectionPool - SFTP Connection Pool initialized with maxConnections=3, maxIdleTime=10min
+11:32:45.576 [main] INFO  [CORR-07DF5680] o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@24b8a393, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@20155dae, org.springframework.security.web.context.SecurityContextHolderFilter@7641ed02, org.springframework.security.web.header.HeaderWriterFilter@75663443, org.springframework.web.filter.CorsFilter@6c49ea0c, org.springframework.security.web.authentication.logout.LogoutFilter@12bcf7c6, com.integrixs.backend.security.JwtAuthenticationFilter@7c226095, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@11069eac, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@5909285b, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@417bfebd, org.springframework.security.web.session.SessionManagementFilter@24b38e8f, org.springframework.security.web.access.ExceptionTranslationFilter@40b70f31, org.springframework.security.web.access.intercept.AuthorizationFilter@34f60be9]
+11:32:46.060 [main] INFO  [CORR-07DF5680] org.springframework.web.SimpLogging - Starting...
+11:32:46.063 [main] INFO  [CORR-07DF5680] org.springframework.web.SimpLogging - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@2e64ae1a]]
+11:32:46.064 [main] INFO  [CORR-07DF5680] org.springframework.web.SimpLogging - Started.
+11:32:46.090 [main] INFO  [CORR-07DF5680] c.i.c.service.DynamicLoggingService - Initializing dynamic logging configuration from database
+11:32:46.101 [MessageBroker-1] DEBUG [] c.i.c.s.DeployedFlowSchedulingService - Running periodic scheduler maintenance...
+11:32:46.144 [main] DEBUG [CORR-07DF5680] c.i.c.service.DynamicLoggingService - Loaded 34 logging configuration entries from database
+11:32:46.151 [MessageBroker-1] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduler status: 1 active deployments, 0 running executions
+11:32:46.178 [main] DEBUG [CORR-07DF5680] c.i.c.service.DynamicLoggingService - Set root logger level to INFO
+11:32:46.195 [main] INFO  [CORR-07DF5680] c.i.c.service.DynamicLoggingService - Dynamic logging configuration initialized successfully
+11:32:46.220 [main] INFO  [CORR-07DF5680] c.i.backend.config.LoggingConfig - Database logging appender configured and started with dynamic configuration
+11:32:46.225 [main] INFO  [CORR-07DF5680] com.integrixs.H2HBackendApplication - Started H2HBackendApplication in 6.349 seconds (process running for 6.954)
+11:32:46.283 [main] INFO  [CORR-07DF5680] com.integrixs.H2HBackendApplication - 
+----------------------------------------------------------
+	Application 'Integrixs Host 2 Host' is running! Access URLs:
+	Local:      http://localhost:8080/
+	External:   http://127.0.0.1:8080/
+	Profile(s): dev
+	Context:    /
+----------------------------------------------------------
+
+Default Admin Credentials:
+	Username: Administrator
+	Password: Int3grix@01
+
+API Documentation:
+	Health:     http://localhost:8080/api/health
+	Auth:       http://localhost:8080/api/auth/login
+	Users:      http://localhost:8080/api/users
+	Dashboard:  http://localhost:8080/api/dashboard/overview
+----------------------------------------------------------
+
+11:32:47.481 [http-nio-8080-exec-1] INFO  [] o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+11:32:47.489 [http-nio-8080-exec-1] INFO  [] o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+11:32:47.506 [http-nio-8080-exec-1] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /actuator/health
+11:32:47.534 [http-nio-8080-exec-1] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:32:47.543 [http-nio-8080-exec-1] WARN  [] o.s.w.s.h.HandlerMappingIntrospector - Cache miss for REQUEST dispatch to '/actuator/health' (previous null). Performing MatchableHandlerMapping lookup. This is logged once only at WARN level, and every time at TRACE.
+11:32:47.564 [http-nio-8080-exec-1] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /actuator/health
+11:33:13.062 [http-nio-8080-exec-3] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /login
+11:33:13.086 [http-nio-8080-exec-3] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.109 [http-nio-8080-exec-3] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /login
+11:33:13.186 [http-nio-8080-exec-4] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /assets/index-CAXjYEqu.js
+11:33:13.187 [http-nio-8080-exec-5] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /assets/vendor-BixgUiYW.js
+11:33:13.189 [http-nio-8080-exec-6] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /assets/index-BMA2HwW5.css
+11:33:13.190 [http-nio-8080-exec-8] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /assets/charts-YJBFa-Wq.js
+11:33:13.190 [http-nio-8080-exec-7] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /assets/router-DLHYaaVZ.js
+11:33:13.205 [http-nio-8080-exec-4] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.220 [http-nio-8080-exec-7] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.224 [http-nio-8080-exec-8] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.228 [http-nio-8080-exec-6] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.232 [http-nio-8080-exec-5] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.285 [http-nio-8080-exec-6] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /assets/index-BMA2HwW5.css
+11:33:13.298 [http-nio-8080-exec-8] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /assets/charts-YJBFa-Wq.js
+11:33:13.302 [http-nio-8080-exec-7] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /assets/router-DLHYaaVZ.js
+11:33:13.305 [http-nio-8080-exec-4] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /assets/index-CAXjYEqu.js
+11:33:13.307 [http-nio-8080-exec-5] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /assets/vendor-BixgUiYW.js
+11:33:13.563 [http-nio-8080-exec-9] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /vite.svg
+11:33:13.570 [http-nio-8080-exec-9] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:13.589 [http-nio-8080-exec-9] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /vite.svg
+11:33:26.307 [http-nio-8080-exec-8] DEBUG [] o.s.security.web.FilterChainProxy - Securing POST /api/auth/login
+11:33:26.321 [http-nio-8080-exec-8] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:26.330 [http-nio-8080-exec-8] DEBUG [] o.s.security.web.FilterChainProxy - Secured POST /api/auth/login
+11:33:26.361 [http-nio-8080-exec-8] INFO  [] c.i.b.controller.AuthController - Login attempt for user: cjbester
+11:33:27.164 [http-nio-8080-exec-8] DEBUG [] o.s.s.a.d.DaoAuthenticationProvider - Authenticated user
+11:33:27.170 [http-nio-8080-exec-8] INFO  [] c.i.b.l.H2HAuthenticationLogger - AUTHENTICATION.SUCCESS - User: cjbester - Session: H2H-SID-d7d8806c - IP: 0:0:0:0:0:0:0:1 - Roles: ADMINISTRATOR - TokenExpiry: 2025-12-30T09:33:27.170561Z
+11:33:27.182 [http-nio-8080-exec-8] DEBUG [] c.i.c.service.TransactionLogService - Saved transaction log: AUTH_SUCCESS - Authentication successful for user: cjbester
+11:33:27.183 [http-nio-8080-exec-8] DEBUG [] c.i.b.s.AuthenticationEventListener - Authentication success event logged for user: cjbester
+11:33:27.185 [http-nio-8080-exec-8] DEBUG [] c.i.b.repository.UserRepository - Updated last login for user ID: a878941b-8cd9-457e-b432-2774e8ed015e
+11:33:27.222 [http-nio-8080-exec-8] INFO  [] c.i.b.controller.AuthController - Successful login for user: cjbester (role: ADMINISTRATOR)
+11:33:27.259 [http-nio-8080-exec-7] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /api/dashboard/health
+11:33:27.259 [http-nio-8080-exec-4] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /api/dashboard/adapter-stats
+11:33:27.259 [http-nio-8080-exec-5] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /api/configuration/dashboard/intervals
+11:33:27.260 [http-nio-8080-exec-9] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /api/dashboard/recent-executions?limit=10
+11:33:27.270 [http-nio-8080-exec-6] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /vite.svg
+11:33:27.272 [http-nio-8080-exec-3] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /ws/info?t=1767000807269
+11:33:27.275 [http-nio-8080-exec-6] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:27.298 [http-nio-8080-exec-3] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:27.311 [http-nio-8080-exec-6] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /vite.svg
+11:33:27.335 [http-nio-8080-exec-5] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /api/configuration/dashboard/intervals
+11:33:27.337 [http-nio-8080-exec-4] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /api/dashboard/adapter-stats
+11:33:27.337 [http-nio-8080-exec-7] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /api/dashboard/health
+11:33:27.337 [http-nio-8080-exec-9] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /api/dashboard/recent-executions?limit=10
+11:33:27.355 [http-nio-8080-exec-3] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /ws/info?t=1767000807269
+11:33:27.370 [http-nio-8080-exec-5] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorizing method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.SystemConfigurationController.getDashboardRefreshIntervals(); target is of class [com.integrixs.backend.controller.SystemConfigurationController]
+11:33:27.387 [http-nio-8080-exec-2] DEBUG [] o.s.security.web.FilterChainProxy - Securing GET /ws/337/32a3xv2c/websocket
+11:33:27.390 [http-nio-8080-exec-7] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorizing method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getSystemHealth(); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.420 [http-nio-8080-exec-4] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorizing method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getAdapterStatistics(); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.425 [http-nio-8080-exec-9] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorizing method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getRecentExecutions(int); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.440 [http-nio-8080-exec-2] DEBUG [] o.s.s.w.a.AnonymousAuthenticationFilter - Set SecurityContextHolder to anonymous SecurityContext
+11:33:27.483 [http-nio-8080-exec-5] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorized method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.SystemConfigurationController.getDashboardRefreshIntervals(); target is of class [com.integrixs.backend.controller.SystemConfigurationController]
+11:33:27.483 [http-nio-8080-exec-9] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorized method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getRecentExecutions(int); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.483 [http-nio-8080-exec-7] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorized method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getSystemHealth(); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.483 [http-nio-8080-exec-4] DEBUG [] o.s.s.a.m.AuthorizationManagerBeforeMethodInterceptor - Authorized method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.integrixs.backend.controller.DashboardController.getAdapterStatistics(); target is of class [com.integrixs.backend.controller.DashboardController]
+11:33:27.486 [http-nio-8080-exec-2] DEBUG [] o.s.security.web.FilterChainProxy - Secured GET /ws/337/32a3xv2c/websocket
+11:33:44.619 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:33:44.627 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:33:44.631 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:33:44.634 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:33:44.638 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:33:44.643 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:33:44.649 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:33:44.669 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:33:44.673 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:33:44.677 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:33:44.680 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:33:44.684 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:33:44.687 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:33:44.694 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:33:45.986 [MessageBroker-1] INFO  [] o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 1 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(1)-CONNECTED(1)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 6, active threads = 0, queued tasks = 0, completed tasks = 6], outboundChannel[pool size = 2, active threads = 0, queued tasks = 0, completed tasks = 2], sockJsScheduler[pool size = 10, active threads = 1, queued tasks = 2, completed tasks = 5]
+11:34:44.718 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:34:44.727 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:34:44.730 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:34:44.733 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:34:44.736 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:34:44.744 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:34:44.751 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:34:44.754 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:34:44.757 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:34:44.760 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:34:44.763 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:34:44.766 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:34:44.769 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:34:44.772 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:35:44.775 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:35:44.782 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:35:44.785 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:35:44.790 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:35:44.796 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:35:44.818 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:35:44.821 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:35:44.824 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:35:44.827 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:35:44.829 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:35:44.832 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:35:44.834 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:35:44.838 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:35:44.843 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:36:44.853 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:36:44.872 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:36:44.876 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:36:44.879 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:36:44.883 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:36:44.886 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:36:44.890 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:36:44.895 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:36:44.900 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:36:44.918 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:36:44.921 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:36:44.923 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:36:44.925 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:36:44.928 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:37:44.935 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:37:44.949 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:37:44.971 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:37:44.976 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:37:44.979 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:37:44.982 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:37:44.985 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:37:44.988 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:37:44.994 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:37:45.016 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:37:45.020 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:37:45.023 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:37:45.025 [DeployedFlow-Adapter-2] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:37:45.028 [DeployedFlow-Adapter-2] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:37:46.090 [MessageBroker-16] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduler status: 1 active deployments, 0 running executions
+11:38:45.035 [DeployedFlow-Adapter-4] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:38:45.046 [DeployedFlow-Adapter-4] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:38:45.068 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:38:45.071 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:38:45.074 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:38:45.076 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:38:45.079 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:38:45.082 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:38:45.085 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:38:45.089 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:38:45.095 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:38:45.117 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:38:45.121 [DeployedFlow-Adapter-4] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:38:45.123 [DeployedFlow-Adapter-4] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:39:45.133 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:39:45.141 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:39:45.147 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:39:45.169 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:39:45.173 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:39:45.176 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:39:45.178 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:39:45.181 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:39:45.184 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:39:45.187 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:39:45.192 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:39:45.197 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:39:45.218 [DeployedFlow-Adapter-1] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:39:45.222 [DeployedFlow-Adapter-1] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:40:45.246 [DeployedFlow-Adapter-5] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:40:45.257 [DeployedFlow-Adapter-5] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:40:45.264 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:40:45.285 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:40:45.288 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:40:45.292 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:40:45.295 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:40:45.298 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:40:45.304 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:40:45.310 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:40:45.332 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:40:45.336 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:40:45.339 [DeployedFlow-Adapter-5] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:40:45.342 [DeployedFlow-Adapter-5] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:41:45.348 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:41:45.359 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:41:45.362 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:41:45.365 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:41:45.388 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:41:45.391 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:41:45.394 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:41:45.397 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:41:45.400 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:41:45.403 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:41:45.406 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:41:45.410 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:41:45.413 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:41:45.416 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:42:45.439 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:42:45.445 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:42:45.448 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:42:45.452 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:42:45.455 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:42:45.458 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:42:45.460 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:42:45.463 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:42:45.483 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:42:45.486 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:42:45.490 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:42:45.493 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:42:45.496 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:42:45.499 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:42:46.109 [MessageBroker-15] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduler status: 1 active deployments, 0 running executions
+11:43:45.506 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:43:45.512 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:43:45.515 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:43:45.538 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:43:45.542 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:43:45.545 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:43:45.547 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:43:45.550 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:43:45.553 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:43:45.556 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:43:45.558 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:43:45.561 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:43:45.563 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:43:45.566 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:44:45.591 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:44:45.599 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:44:45.602 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:44:45.605 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:44:45.608 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:44:45.611 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:44:45.614 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:44:45.616 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:44:45.639 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:44:45.643 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:44:45.646 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:44:45.649 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:44:45.653 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:44:45.657 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:45:45.664 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:45:45.690 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:45:45.694 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:45:45.697 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:45:45.700 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:45:45.702 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:45:45.705 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:45:45.708 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:45:45.711 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:45:45.713 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:45:45.716 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:45:45.736 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:45:45.739 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:45:45.742 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:46:45.747 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:46:45.753 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:46:45.757 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:46:45.760 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:46:45.762 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:46:45.766 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:46:45.787 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:46:45.791 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:46:45.795 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:46:45.798 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:46:45.800 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:46:45.803 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:46:45.806 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:46:45.808 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:47:45.816 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:47:45.841 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:47:45.844 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:47:45.847 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:47:45.849 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:47:45.852 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:47:45.854 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:47:45.858 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:47:45.861 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:47:45.863 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:47:45.866 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:47:45.889 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:47:45.893 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:47:45.896 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:47:46.110 [MessageBroker-14] INFO  [] c.i.c.s.DeployedFlowSchedulingService - Scheduler status: 1 active deployments, 0 running executions
+11:48:45.903 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:48:45.912 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:48:45.915 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:48:45.935 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:48:45.940 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:48:45.944 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:48:45.947 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:48:45.949 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:48:45.952 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:48:45.955 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:48:45.958 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:48:45.960 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:48:45.963 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:48:45.965 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:49:45.988 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:49:45.995 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:49:45.998 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:49:46.001 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:49:46.003 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:49:46.006 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:49:46.009 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:49:46.011 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:49:46.014 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:49:46.017 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:49:46.037 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:49:46.041 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:49:46.044 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:49:46.047 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:50:46.054 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:50:46.059 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:50:46.061 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:50:46.063 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:50:46.064 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:50:46.066 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:50:46.068 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:50:46.087 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:50:46.090 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:50:46.092 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:50:46.094 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:50:46.097 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:50:46.099 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:50:46.101 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+11:51:46.108 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+11:51:46.114 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+11:51:46.117 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+11:51:46.137 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+11:51:46.141 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+11:51:46.144 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+11:51:46.147 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+11:51:46.149 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+11:51:46.152 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+11:51:46.154 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+11:51:46.157 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+11:51:46.160 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+11:51:46.162 [DeployedFlow-Adapter-3] INFO  [] c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+11:51:46.165 [DeployedFlow-Adapter-3] INFO  [] c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
