@@ -1,0 +1,113 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+*.log.*
+logs/
+backend/logs/
+*/logs/
+**/logs/
+
+# Package Files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+target/
+*/target/
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+.metadata/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js (Frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.eslintcache
+
+# Frontend build output
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/coverage/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# Application specific
+backend/temp/
+temp/
+*.pid
+app.pid
+
+# Spring Boot
+application.log
+application-*.log
+spring.log
+
+# H2H specific logs
+h2h-*.log
+transactions.log
+h2h-adapter-execution.log
+h2h-backend-error.log
+h2h-flow-execution.log
+
+# Backup files
+*.bak
+*.backup
+
+# Test output
+test-output/
