@@ -2555,3 +2555,18 @@ API Documentation:
 2025-12-29 11:51:46.160 INFO  c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
 2025-12-29 11:51:46.162 INFO  c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
 2025-12-29 11:51:46.165 INFO  c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
+2025-12-29 11:52:46.112 INFO  c.i.c.s.DeployedFlowSchedulingService - Scheduler status: 1 active deployments, 0 running executions
+2025-12-29 11:52:46.173 INFO  c.i.c.s.AdapterExecutionService - Executing adapter: 0ad9315b-b01c-4f53-b0df-504ed5d823e2 for step: polling
+2025-12-29 11:52:46.188 INFO  c.i.c.s.AdapterExecutionService - Using FileSenderAdapter adapter executor for Payment Sender
+2025-12-29 11:52:46.190 INFO  c.i.c.adapter.file.FileSenderAdapter - === STARTING FILE SENDER ADAPTER EXECUTION ===
+2025-12-29 11:52:46.193 INFO  c.i.c.adapter.file.FileSenderAdapter - Adapter: Payment Sender (ID: 0ad9315b-b01c-4f53-b0df-504ed5d823e2)
+2025-12-29 11:52:46.195 INFO  c.i.c.adapter.file.FileSenderAdapter - Direction: SENDER (collecting files from source directory)
+2025-12-29 11:52:46.197 INFO  c.i.c.adapter.file.FileSenderAdapter - Sender adapter Payment Sender started
+2025-12-29 11:52:46.199 INFO  c.i.c.adapter.file.FileSenderAdapter - Request message entering the adapter processing with user system
+2025-12-29 11:52:46.201 INFO  c.i.c.adapter.file.FileSenderAdapter - Configuration - Source Directory: /Users/cjbester/git/Test/dev/outbound/payments, File Pattern: *.xml, Processing Mode: Archive
+2025-12-29 11:52:46.203 INFO  c.i.c.adapter.file.FileSenderAdapter - No files available from bank
+2025-12-29 11:52:46.205 INFO  c.i.c.adapter.file.FileSenderAdapter - === FILE SENDER ADAPTER COMPLETE ===
+2025-12-29 11:52:46.207 INFO  c.i.c.adapter.file.FileSenderAdapter - ✓ Success: 0 | Errors: 0
+2025-12-29 11:52:46.210 INFO  c.i.c.adapter.file.FileSenderAdapter - ✓ Total bytes processed: 0
+2025-12-29 11:52:46.212 INFO  c.i.c.adapter.file.FileSenderAdapter - ✓ No files found to collect
+2025-12-29 11:52:46.215 INFO  c.i.c.s.AdapterExecutionService - Adapter execution completed successfully: 0ad9315b-b01c-4f53-b0df-504ed5d823e2
