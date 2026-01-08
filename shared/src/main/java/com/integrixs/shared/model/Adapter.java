@@ -3,6 +3,7 @@ package com.integrixs.shared.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -52,6 +53,9 @@ public class Adapter {
     private Boolean active;
     private AdapterStatus status;
     
+    // Import tracking
+    private UUID originalAdapterId;  // ID of the original adapter when imported
+    
     // Performance tracking
     private Long averageExecutionTimeMs;
     private BigDecimal successRatePercent;
@@ -70,7 +74,9 @@ public class Adapter {
         this.averageExecutionTimeMs = 0L;
         this.successRatePercent = new BigDecimal("100.0");
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt and updatedBy should be NULL on creation - only set on actual updates
+        this.updatedAt = null;
+        this.updatedBy = null;
     }
     
     public Adapter(String name, String bank, String adapterType, String direction, Map<String, Object> configuration, UUID createdBy) {
@@ -81,7 +87,16 @@ public class Adapter {
         this.direction = direction;
         this.configuration = configuration;
         this.createdBy = createdBy;
-        this.updatedBy = createdBy;
+        // Do not set updatedBy on creation - only set on actual updates
+    }
+    
+    /**
+     * Mark entity as updated by specified user. Should be called for all business logic updates.
+     * This properly maintains the audit trail for UPDATE operations.
+     */
+    public void markAsUpdated(UUID updatedBy) {
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = Objects.requireNonNull(updatedBy, "Updated by cannot be null");
     }
     
     // Business logic methods
@@ -151,7 +166,6 @@ public class Adapter {
         this.connectionValidated = successful;
         this.testResult = result;
         this.lastTestAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
@@ -209,7 +223,6 @@ public class Adapter {
     
     public void setConfiguration(Map<String, Object> configuration) {
         this.configuration = configuration;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public Boolean getConnectionValidated() {
@@ -242,7 +255,14 @@ public class Adapter {
     
     public void setActive(Boolean active) {
         this.active = active;
-        this.updatedAt = LocalDateTime.now();
+    }
+    
+    public UUID getOriginalAdapterId() {
+        return originalAdapterId;
+    }
+    
+    public void setOriginalAdapterId(UUID originalAdapterId) {
+        this.originalAdapterId = originalAdapterId;
     }
     
     public boolean isActive() {
@@ -255,7 +275,6 @@ public class Adapter {
     
     public void setStatus(AdapterStatus status) {
         this.status = status;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public boolean canProcess() {
@@ -282,6 +301,10 @@ public class Adapter {
         return createdAt;
     }
     
+    /**
+     * Sets the creation timestamp. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -290,6 +313,10 @@ public class Adapter {
         return updatedAt;
     }
     
+    /**
+     * Sets the update timestamp. Should only be used during UPDATE operations by persistence layer.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
@@ -298,6 +325,10 @@ public class Adapter {
         return createdBy;
     }
     
+    /**
+     * Sets the user who created this entity. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedBy(UUID createdBy) {
         this.createdBy = createdBy;
     }

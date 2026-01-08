@@ -13,7 +13,7 @@
     <artifactId>shared</artifactId>
     <packaging>jar</packaging>
 
-    <name>H2H Shared</name>
+    <name>Shared</name>
     <description>Shared utilities, constants, and DTOs for H2H File Transfer</description>
 
     <dependencies>

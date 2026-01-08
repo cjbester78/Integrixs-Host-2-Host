@@ -8,9 +8,12 @@ import com.integrixs.shared.model.DeployedFlow;
 import com.integrixs.shared.model.FlowExecution;
 import com.integrixs.shared.model.Adapter;
 import com.integrixs.shared.util.SecurityContextHelper;
+import com.integrixs.core.service.SystemAuthenticationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -71,10 +74,15 @@ public class DeployedFlowSchedulingService {
         // Load existing running executions to track concurrency
         loadRunningExecutions();
         
-        // Start adapters for all currently deployed flows
-        startAdaptersForDeployedFlows();
-        
         logger.info("Deployed Flow Scheduling Service initialized successfully");
+    }
+    
+    @EventListener(ContextRefreshedEvent.class)
+    public void onContextRefreshed() {
+        logger.info("Spring context refreshed - starting adapters for existing deployed flows...");
+        
+        // Start adapters for all currently deployed flows after full Spring context initialization
+        startAdaptersForDeployedFlows();
     }
     
     /**
@@ -360,8 +368,8 @@ public class DeployedFlowSchedulingService {
             payload.put("triggerData", triggerData);
             payload.put("triggeredAt", LocalDateTime.now().toString());
             
-            // Execute flow - use SCHEDULED trigger type for automatic executions
-            FlowExecution execution = flowExecutionService.executeFlow(flowId, payload, systemUserId, FlowExecution.TriggerType.SCHEDULED);
+            // Execute flow with system authentication context - use SCHEDULED trigger type for automatic executions
+            FlowExecution execution = executeFlowWithSystemAuth(flowId, payload, systemUserId);
             
             // Update tracking with actual execution ID
             removeRunningExecution(deploymentId, executionId);
@@ -810,5 +818,17 @@ public class DeployedFlowSchedulingService {
         }
         
         logger.info("Deployed Flow Scheduling Service shutdown completed");
+    }
+    
+    /**
+     * Execute flow with system authentication context
+     */
+    private FlowExecution executeFlowWithSystemAuth(UUID flowId, Map<String, Object> payload, UUID systemUserId) {
+        try {
+            SystemAuthenticationContext.setSystemIntegratorAuthentication();
+            return flowExecutionService.executeFlow(flowId, payload, systemUserId, FlowExecution.TriggerType.SCHEDULED);
+        } finally {
+            SystemAuthenticationContext.clearAuthentication();
+        }
     }
 }

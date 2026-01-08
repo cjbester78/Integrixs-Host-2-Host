@@ -30,7 +30,7 @@ public class UserService {
     }
 
     /**
-     * Initialize default admin user
+     * Initialize default users (admin and integrator)
      */
     private void initializeDefaultUsers() {
         // Create default admin user if not exists
@@ -45,6 +45,20 @@ public class UserService {
             admin.setTimezone("UTC");
             saveUser(admin);
             logger.info("Created default admin user: Administrator");
+        }
+        
+        // Create default integrator user if not exists
+        if (!userRepository.existsByUsername("Integrator")) {
+            User integrator = new User(
+                "Integrator",
+                "integrator@integrixlab.com",
+                passwordEncoder.encode("Int3grix@Flow01"),
+                "System Integration Service",
+                User.UserRole.INTEGRATOR
+            );
+            integrator.setTimezone("UTC");
+            saveUser(integrator);
+            logger.info("Created default integrator user: Integrator");
         }
     }
 
@@ -154,6 +168,23 @@ public class UserService {
     public List<User> findActiveViewers() {
         return userRepository.findActiveViewers();
     }
+    
+    /**
+     * Find integrators
+     */
+    public List<User> findActiveIntegrators() {
+        return userRepository.findByRole(User.UserRole.INTEGRATOR)
+            .stream()
+            .filter(User::isEnabled)
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Get the system integrator user for automated flow execution
+     */
+    public Optional<User> getSystemIntegrator() {
+        return findByUsername("Integrator");
+    }
 
     /**
      * Delete user
@@ -206,6 +237,7 @@ public class UserService {
         result.put("enabledUsers", stats.enabledUsers());
         result.put("administrators", stats.administrators());
         result.put("viewers", stats.viewers());
+        result.put("integrators", countByRole(User.UserRole.INTEGRATOR));
         result.put("lockedUsers", stats.lockedUsers());
         return result;
     }

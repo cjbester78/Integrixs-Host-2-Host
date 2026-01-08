@@ -52,10 +52,11 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
         
         String filePattern = AdapterConfigUtil.getStringConfig(config, "filePattern", false, "*");
         String remoteDirectory = AdapterConfigUtil.getStringConfig(config, "remoteDirectory", true, null);
+        String postProcessAction = AdapterConfigUtil.getStringConfig(config, "postProcessAction", false, "ARCHIVE");
         String archiveDirectory = AdapterConfigUtil.getStringConfig(config, "archiveDirectory", false, null);
         
-        logger.info("Configuration - Remote Directory: {}, File Pattern: {}, Archive Directory: {}", 
-                   remoteDirectory, filePattern, archiveDirectory);
+        logger.info("Configuration - Remote Directory: {}, File Pattern: {}, Post Process Action: {}", 
+                   remoteDirectory, filePattern, postProcessAction);
         
         ChannelSftp sftpChannel = null;
         
@@ -117,17 +118,8 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
                     
                     logger.info("Successfully downloaded: {} ({} bytes)", fileName, fileSize);
                     
-                    // Archive file on remote server if archive directory is configured
-                    if (archiveDirectory != null && !archiveDirectory.trim().isEmpty()) {
-                        try {
-                            String archiveFilePath = archiveDirectory + "/" + fileName;
-                            sftpChannel.rename(remoteFilePath, archiveFilePath);
-                            logger.info("Archived remote file: {} -> {}", remoteFilePath, archiveFilePath);
-                        } catch (Exception e) {
-                            logger.warn("Failed to archive remote file {}: {}", remoteFilePath, e.getMessage());
-                            // Don't fail the entire operation if archiving fails
-                        }
-                    }
+                    // Handle post-processing based on configuration
+                    handlePostProcessing(sftpChannel, config, remoteFilePath, fileName, postProcessAction);
                     
                 } catch (Exception e) {
                     logger.error("Error downloading file {}: {}", remoteFilePath, e.getMessage(), e);
@@ -153,6 +145,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
             result.put("foundFiles", processedFiles);
             result.put("filePattern", filePattern);
             result.put("remoteDirectory", remoteDirectory);
+            result.put("postProcessAction", postProcessAction);
             result.put("archiveDirectory", archiveDirectory);
             result.put("filesDiscovered", matchingFiles.size());
             
@@ -167,6 +160,127 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
         } finally {
             // Cleanup SFTP connection
             SftpConnectionUtil.closeSftpConnection(sftpChannel);
+        }
+    }
+    
+    /**
+     * Handle post-processing of downloaded files based on configuration.
+     * Only uses configuration values that are actually saved for this adapter.
+     */
+    private void handlePostProcessing(ChannelSftp sftpChannel, Map<String, Object> config, 
+                                    String remoteFilePath, String fileName, String postProcessAction) {
+        try {
+            logger.info("Post-processing file: {} with action: {}", fileName, postProcessAction);
+            
+            switch (postProcessAction.toUpperCase()) {
+                case "ARCHIVE":
+                    // Only archive if archive directory is specifically configured
+                    if (config.containsKey("archiveDirectory")) {
+                        String archiveDirectory = AdapterConfigUtil.getStringConfig(config, "archiveDirectory", false, null);
+                        if (archiveDirectory != null && !archiveDirectory.trim().isEmpty()) {
+                            String archiveFilePath = archiveDirectory + "/" + fileName;
+                            
+                            // Check if timestamp should be added to archived filename (only if configured)
+                            if (config.containsKey("archiveWithTimestamp")) {
+                                boolean archiveWithTimestamp = AdapterConfigUtil.getBooleanConfig(config, "archiveWithTimestamp", false);
+                                if (archiveWithTimestamp) {
+                                    String baseName = fileName.substring(0, fileName.lastIndexOf('.') != -1 ? fileName.lastIndexOf('.') : fileName.length());
+                                    String extension = fileName.lastIndexOf('.') != -1 ? fileName.substring(fileName.lastIndexOf('.')) : "";
+                                    String timestamp = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(java.time.LocalDateTime.now());
+                                    archiveFilePath = archiveDirectory + "/" + baseName + "_" + timestamp + extension;
+                                }
+                            }
+                            
+                            // Handle compression if specified (only if configured)
+                            if (config.containsKey("compressionType")) {
+                                String compressionType = AdapterConfigUtil.getStringConfig(config, "compressionType", false, "NONE");
+                                if (!"NONE".equalsIgnoreCase(compressionType)) {
+                                    // For remote SFTP files, compression would require downloading, compressing, and re-uploading
+                                    // This is complex for remote files, so log a note about it
+                                    logger.info("Note: Compression type '{}' specified but not implemented for remote SFTP files. File archived without compression.", compressionType);
+                                }
+                            }
+                            
+                            sftpChannel.rename(remoteFilePath, archiveFilePath);
+                            logger.info("✓ Archived remote file: {} -> {}", remoteFilePath, archiveFilePath);
+                        } else {
+                            logger.warn("Archive directory configured but empty, file remains in original location: {}", remoteFilePath);
+                        }
+                    } else {
+                        logger.warn("Archive directory not configured, file remains in original location: {}", remoteFilePath);
+                    }
+                    break;
+                    
+                case "KEEP_AND_MARK":
+                    // Use configured processed directory if available
+                    String processedDirectory = config.containsKey("processedDirectory") ? 
+                        AdapterConfigUtil.getStringConfig(config, "processedDirectory", false, null) : null;
+                    
+                    // Use configured suffix or default to ".processed" only if suffix is configured
+                    String processedFileSuffix = config.containsKey("processedFileSuffix") ? 
+                        AdapterConfigUtil.getStringConfig(config, "processedFileSuffix", false, ".processed") : ".processed";
+                    
+                    if (processedDirectory != null && !processedDirectory.trim().isEmpty()) {
+                        // Move to processed directory with suffix
+                        String processedFileName = fileName + processedFileSuffix;
+                        String processedFilePath = processedDirectory + "/" + processedFileName;
+                        sftpChannel.rename(remoteFilePath, processedFilePath);
+                        logger.info("✓ Moved to processed directory: {} -> {}", remoteFilePath, processedFilePath);
+                    } else {
+                        // Just rename in place with suffix
+                        String processedFilePath = remoteFilePath + processedFileSuffix;
+                        sftpChannel.rename(remoteFilePath, processedFilePath);
+                        logger.info("✓ Marked as processed: {} -> {}", remoteFilePath, processedFilePath);
+                    }
+                    break;
+                    
+                case "KEEP_AND_REPROCESS":
+                    // Do not move, rename, or delete the file - keep it in original location for reprocessing
+                    // Log reprocessing delay if configured
+                    if (config.containsKey("reprocessingDelay")) {
+                        Object delayObj = config.get("reprocessingDelay");
+                        String delayInfo = delayObj != null ? delayObj.toString() + "ms" : "default";
+                        logger.info("✓ File kept in original location for reprocessing: {} (reprocessing delay: {})", remoteFilePath, delayInfo);
+                    } else {
+                        logger.info("✓ File kept in original location for reprocessing: {}", remoteFilePath);
+                    }
+                    break;
+                    
+                case "DELETE":
+                    // Only proceed with delete if confirmation is specifically configured and enabled
+                    if (config.containsKey("confirmDelete")) {
+                        boolean confirmDelete = AdapterConfigUtil.getBooleanConfig(config, "confirmDelete", false);
+                        
+                        if (confirmDelete) {
+                            String deleteBackupDirectory = config.containsKey("deleteBackupDirectory") ? 
+                                AdapterConfigUtil.getStringConfig(config, "deleteBackupDirectory", false, null) : null;
+                            
+                            if (deleteBackupDirectory != null && !deleteBackupDirectory.trim().isEmpty()) {
+                                // Move to backup directory before "deleting"
+                                String backupFilePath = deleteBackupDirectory + "/" + fileName;
+                                sftpChannel.rename(remoteFilePath, backupFilePath);
+                                logger.info("✓ Moved to delete backup directory: {} -> {}", remoteFilePath, backupFilePath);
+                            } else {
+                                // Actually delete the file
+                                sftpChannel.rm(remoteFilePath);
+                                logger.info("✓ Deleted remote file: {}", remoteFilePath);
+                            }
+                        } else {
+                            logger.warn("Delete confirmation disabled, file remains: {}", remoteFilePath);
+                        }
+                    } else {
+                        logger.warn("Delete confirmation not configured, file remains: {}", remoteFilePath);
+                    }
+                    break;
+                    
+                default:
+                    logger.warn("✗ Unknown post-processing action: {}. File remains in original location: {}", postProcessAction, remoteFilePath);
+                    break;
+            }
+            
+        } catch (Exception e) {
+            logger.warn("Post-processing failed for file {}: {}. File remains in original location.", fileName, e.getMessage());
+            // Don't fail the entire operation if post-processing fails
         }
     }
     

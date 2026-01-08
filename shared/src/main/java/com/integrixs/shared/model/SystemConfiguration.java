@@ -1,6 +1,7 @@
 package com.integrixs.shared.model;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -65,7 +66,9 @@ public class SystemConfiguration {
     public SystemConfiguration() {
         this.id = UUID.randomUUID();
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt and updatedBy should be NULL on creation - only set on actual updates
+        this.updatedAt = null;
+        this.updatedBy = null;
     }
 
     public SystemConfiguration(String configKey, String configValue, ConfigType configType, 
@@ -76,6 +79,15 @@ public class SystemConfiguration {
         this.configType = configType;
         this.description = description;
         this.category = category;
+    }
+
+    /**
+     * Mark entity as updated by specified user. Should be called for all business logic updates.
+     * This properly maintains the audit trail for UPDATE operations.
+     */
+    public void markAsUpdated(UUID updatedBy) {
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = Objects.requireNonNull(updatedBy, "Updated by cannot be null");
     }
 
     // Utility methods for type conversion
@@ -228,7 +240,6 @@ public class SystemConfiguration {
     public String getConfigValue() { return configValue; }
     public void setConfigValue(String configValue) { 
         this.configValue = configValue;
-        this.updatedAt = LocalDateTime.now();
     }
 
     public ConfigType getConfigType() { return configType; }
@@ -250,12 +261,24 @@ public class SystemConfiguration {
     public void setDefaultValue(String defaultValue) { this.defaultValue = defaultValue; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /**
+     * Sets the creation timestamp. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /**
+     * Sets the update timestamp. Should only be used during UPDATE operations by persistence layer.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public UUID getCreatedBy() { return createdBy; }
+    /**
+     * Sets the user who created this entity. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedBy(UUID createdBy) { this.createdBy = createdBy; }
 
     public UUID getUpdatedBy() { return updatedBy; }

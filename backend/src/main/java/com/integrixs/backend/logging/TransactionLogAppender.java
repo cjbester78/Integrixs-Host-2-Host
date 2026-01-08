@@ -235,10 +235,9 @@ public class TransactionLogAppender extends UnsynchronizedAppenderBase<ILoggingE
      */
     private TransactionLogService getTransactionLogServiceFromContext() {
         try {
-            // This would need to be implemented to get Spring context
-            // For now, return null and let dependency injection handle it
-            return null;
+            return com.integrixs.backend.util.SpringContext.getBean(TransactionLogService.class);
         } catch (Exception e) {
+            // Silently ignore - logging appender should never cause application issues
             return null;
         }
     }

@@ -15,11 +15,23 @@ interface User {
   id: string
   username: string
   email: string
+  fullName: string
   role: 'ADMINISTRATOR' | 'VIEWER'
   enabled: boolean
+  accountNonExpired: boolean
+  accountNonLocked: boolean
+  credentialsNonExpired: boolean
+  timezone: string
+  failedLoginAttempts: number
   createdAt: string
+  updatedAt: string
   lastLogin?: string
-  loginCount: number
+  displayName: string
+  roleDisplayName: string
+  administrator: boolean
+  integrator: boolean
+  viewer: boolean
+  authorities: Array<{ authority: string }>
 }
 
 interface CreateUserRequest {
@@ -47,8 +59,8 @@ const UserManagement: React.FC = () => {
     queryFn: userApi.getAllUsers,
   })
 
-  // Extract the users array from the API response
-  const users = usersResponse?.users || []
+  // Extract the users array from the API response and filter out system users
+  const users = (usersResponse || []).filter((user: any) => user.role !== 'INTEGRATOR')
 
   // Mutations
   const createUserMutation = useMutation({
@@ -97,9 +109,9 @@ const UserManagement: React.FC = () => {
       : 'bg-info/20 text-info'
   }
 
-  const canModifyUser = (user: User) => {
-    // Current user can't modify themselves, and only admins can modify other users
-    return currentUser?.id !== user.id && isAdmin
+  const canModifyUser = () => {
+    // Only admins can modify users
+    return isAdmin
   }
 
   if (!isAdmin) {
@@ -267,8 +279,8 @@ const UserManagement: React.FC = () => {
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Login Count:</span>
-                      <span className="ml-2 text-foreground">{user.loginCount}</span>
+                      <span className="text-muted-foreground">Failed Attempts:</span>
+                      <span className="ml-2 text-foreground">{user.failedLoginAttempts}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Status:</span>
@@ -288,7 +300,7 @@ const UserManagement: React.FC = () => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-2 pt-4 border-t border-border">
-                    {canModifyUser(user) && (
+                    {canModifyUser() && (
                       <>
                         <Button
                           variant="outline"
@@ -299,47 +311,51 @@ const UserManagement: React.FC = () => {
                           Edit User
                         </Button>
                         
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => 
-                            updateUserMutation.mutate({ 
-                              id: user.id, 
-                              data: { ...user, enabled: !user.enabled }
-                            })
-                          }
-                          disabled={updateUserMutation.isPending}
-                        >
-                          {user.enabled ? (
-                            <>
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Deactivate
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Activate
-                            </>
-                          )}
-                        </Button>
+                        {currentUser?.id !== user.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => 
+                              updateUserMutation.mutate({ 
+                                id: user.id, 
+                                data: { ...user, enabled: !user.enabled }
+                              })
+                            }
+                            disabled={updateUserMutation.isPending}
+                          >
+                            {user.enabled ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Activate
+                              </>
+                            )}
+                          </Button>
+                        )}
                         
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => deleteUserMutation.mutate(user.id)}
-                          disabled={deleteUserMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
+                        {currentUser?.id !== user.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => deleteUserMutation.mutate(user.id)}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
+                        )}
+                        
+                        {currentUser?.id === user.id && (
+                          <div className="text-sm text-muted-foreground">
+                            You cannot deactivate or delete your own account
+                          </div>
+                        )}
                       </>
-                    )}
-                    
-                    {currentUser?.id === user.id && (
-                      <div className="text-sm text-muted-foreground">
-                        You cannot modify your own account
-                      </div>
                     )}
                   </div>
                 </div>

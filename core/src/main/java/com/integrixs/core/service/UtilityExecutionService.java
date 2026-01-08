@@ -7,6 +7,8 @@ import com.integrixs.shared.model.FlowUtility;
 import com.integrixs.shared.model.FlowExecutionStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,7 @@ import java.util.zip.*;
 public class UtilityExecutionService {
     
     private static final Logger logger = LoggerFactory.getLogger(UtilityExecutionService.class);
+    private static final Marker ADAPTER_EXECUTION_MARKER = MarkerFactory.getMarker("ADAPTER_EXECUTION");
     
     private final FlowUtilityRepository utilityRepository;
     private final Map<UUID, FlowUtility> utilityCache = new HashMap<>();
@@ -42,7 +45,7 @@ public class UtilityExecutionService {
      */
     public Map<String, Object> executeUtility(String utilityType, Map<String, Object> configuration, 
                                              Map<String, Object> executionContext, FlowExecutionStep step) {
-        logger.info("Executing utility: {} for step: {}", utilityType, step.getId());
+        logger.info(ADAPTER_EXECUTION_MARKER, "Executing utility: {} for step: {}", utilityType, step.getId());
         
         try {
             Map<String, Object> result = new HashMap<>();
@@ -84,7 +87,7 @@ public class UtilityExecutionService {
             result.put("executionEndTime", LocalDateTime.now());
             result.put("executionStatus", "SUCCESS");
             
-            logger.info("Utility execution completed successfully: {}", utilityType);
+            logger.info(ADAPTER_EXECUTION_MARKER, "Utility execution completed successfully: {}", utilityType);
             return result;
             
         } catch (Exception e) {
@@ -375,7 +378,7 @@ public class UtilityExecutionService {
                 return result;
             }
             
-            logger.info("Found {} ZIP files for extraction", zipFiles.size());
+            logger.info(ADAPTER_EXECUTION_MARKER, "Found {} ZIP files for extraction", zipFiles.size());
             
             // Extract each ZIP file using binary content
             int totalExtracted = 0;
@@ -393,7 +396,7 @@ public class UtilityExecutionService {
                         continue;
                     }
                     
-                    logger.info("Processing ZIP file from memory: {} ({} bytes) to directory: {}", fileName, fileContent.length, outputDirectory);
+                    logger.info(ADAPTER_EXECUTION_MARKER, "Processing ZIP file from memory: {} ({} bytes) to directory: {}", fileName, fileContent.length, outputDirectory);
                     Map<String, Object> extractResult = extractZipFromBytes(fileContent, fileName, outputDirectory, filePattern, preserveStructure);
                     extractionResults.add(extractResult);
                     
@@ -405,7 +408,7 @@ public class UtilityExecutionService {
                     List<Map<String, Object>> extractedFilesList = (List<Map<String, Object>>) extractResult.getOrDefault("extractedFiles", new ArrayList<>());
                     extractedFiles.addAll(extractedFilesList);
                     
-                    logger.info("Extracted {} files ({} bytes) from {}", filesExtracted, bytesExtracted, fileName);
+                    logger.info(ADAPTER_EXECUTION_MARKER, "Extracted {} files ({} bytes) from {}", filesExtracted, bytesExtracted, fileName);
                     
                     totalExtracted += filesExtracted;
                     totalBytes += bytesExtracted;
@@ -429,7 +432,7 @@ public class UtilityExecutionService {
             result.put("outputDirectory", outputDirectory);
             result.put("extractedFiles", extractedFiles);
             
-            logger.info("ZIP extraction completed: {} files extracted ({} bytes)", totalExtracted, totalBytes);
+            logger.info(ADAPTER_EXECUTION_MARKER, "ZIP extraction completed: {} files extracted ({} bytes)", totalExtracted, totalBytes);
             
         } catch (Exception e) {
             logger.error("ZIP extraction failed: {}", e.getMessage(), e);

@@ -1,32 +1,17 @@
 import axios from 'axios'
 
-// Determine API base URL - support both local and ngrok access
+// Determine API base URL - production ready
 const getApiBaseUrl = () => {
   // If VITE_API_URL is explicitly set and not empty, use it
   if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.trim() !== '') {
     return import.meta.env.VITE_API_URL
   }
   
-  // Smart detection based on current URL
-  const currentOrigin = window.location.origin
-  
-  // If we're accessing via ngrok domain, use the same origin for API calls
-  if (window.location.hostname.includes('ngrok')) {
-    return currentOrigin
-  }
-  
-  // If we're on localhost:8080 (served by Spring Boot), use same origin
-  if (window.location.port === '8080') {
-    return currentOrigin
-  }
-  
-  // Use ngrok backend URL
-  return 'https://nonportable-astrictively-lorelai.ngrok-free.dev'
+  // Production: Use same origin as frontend
+  return window.location.origin
 }
 
 const API_BASE_URL = getApiBaseUrl()
-console.log('🔗 API Base URL detected:', API_BASE_URL)
-console.log('🌐 Current location:', window.location.origin)
 
 // Create axios instance with interceptors
 export const api = axios.create({
@@ -34,7 +19,6 @@ export const api = axios.create({
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
   },
 })
 
@@ -497,15 +481,8 @@ export const flowApi = {
   },
 
   updateFlow: async (id: string, flowData: any) => {
-    console.log('🔄 Frontend: Updating flow with ID:', id)
-    console.log('📊 Frontend: Flow data being sent:', JSON.stringify(flowData, null, 2))
-    console.log('🏗️ Frontend: Flow definition keys:', flowData?.flowDefinition ? Object.keys(flowData.flowDefinition) : 'null')
-    console.log('📝 Frontend: Flow nodes count:', flowData?.flowDefinition?.nodes?.length || 0)
-    console.log('🔗 Frontend: Flow edges count:', flowData?.flowDefinition?.edges?.length || 0)
-    
     try {
       const response = await api.put(`/api/flows/${id}`, flowData)
-      console.log('✅ Frontend: Flow update response:', response.data)
       return response.data
     } catch (error: any) {
       console.error('❌ Frontend: Flow update failed:', error)
@@ -546,11 +523,8 @@ export const flowApi = {
   },
 
   validateFlow: async (id: string) => {
-    console.log('🔍 Frontend: Validating flow with ID:', id)
-    
     try {
       const response = await api.post(`/api/flows/${id}/validate`)
-      console.log('✅ Frontend: Flow validation response:', response.data)
       return response.data
     } catch (error: any) {
       console.error('❌ Frontend: Flow validation failed:', error)
@@ -566,11 +540,8 @@ export const flowApi = {
 
   // Deployment API functions
   deployFlow: async (id: string) => {
-    console.log('🚀 Frontend: Attempting to deploy flow with ID:', id)
-    
     try {
       const response = await api.post(`/api/flows/${id}/deploy`)
-      console.log('✅ Frontend: Flow deployment successful:', response.data)
       return response.data
     } catch (error: any) {
       console.error('❌ Frontend: Flow deployment failed:', error)
@@ -720,43 +691,6 @@ export const executionApi = {
   }
 }
 
-// System Logs API endpoints
-export const systemLogsApi = {
-  getRecentLogs: async (params?: { 
-    limit?: number; 
-    level?: string; 
-    category?: string;
-    search?: string;
-  }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.limit) searchParams.append('limit', params.limit.toString())
-    if (params?.level && params.level !== 'ALL') searchParams.append('level', params.level)
-    if (params?.category && params.category !== 'ALL') searchParams.append('category', params.category)
-    if (params?.search) searchParams.append('search', params.search)
-    
-    const url = `/api/system/logs/recent${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
-    const response = await api.get(url)
-    return response.data
-  },
-
-  exportLogs: async (params?: { 
-    limit?: number; 
-    level?: string; 
-    category?: string;
-    format?: string;
-  }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.limit) searchParams.append('limit', params.limit.toString())
-    if (params?.level && params.level !== 'ALL') searchParams.append('level', params.level)
-    if (params?.category && params.category !== 'ALL') searchParams.append('category', params.category)
-    if (params?.format) searchParams.append('format', params.format)
-    
-    const url = `/api/system/logs/export${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
-    const response = await api.get(url, { responseType: 'blob' })
-    return response.data
-  }
-}
-
 // Transaction Logs API endpoints
 export const transactionLogsApi = {
   getRecentLogs: async (params?: { 
@@ -789,6 +723,72 @@ export const transactionLogsApi = {
     if (params?.format) searchParams.append('format', params.format)
     
     const url = `/api/transaction-logs/export${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    const response = await api.get(url, { responseType: 'blob' })
+    return response.data
+  }
+}
+
+// Environment Configuration API
+export const environmentApi = {
+  getCurrentEnvironment: async () => {
+    const response = await api.get('/api/system/environment')
+    return response.data
+  },
+
+  updateEnvironment: async (data: {
+    type?: string;
+    enforceRestrictions?: boolean;
+    restrictionMessage?: string;
+  }) => {
+    const response = await api.put('/api/system/environment', data)
+    return response.data
+  },
+
+  getEnvironmentTypes: async () => {
+    const response = await api.get('/api/system/environment/types')
+    return response.data
+  },
+
+  checkPermission: async (action: string) => {
+    const response = await api.get(`/api/system/environment/permissions/${action}`)
+    return response.data
+  }
+}
+
+// System Logs API endpoints
+export const systemLogsApi = {
+  getRecentLogs: async (params?: { 
+    limit?: number; 
+    level?: string; 
+    search?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.append('limit', params.limit.toString())
+    if (params?.level && params.level !== 'ALL') searchParams.append('level', params.level)
+    if (params?.search) searchParams.append('search', params.search)
+    if (params?.page !== undefined) searchParams.append('page', params.page.toString())
+    if (params?.size) searchParams.append('size', params.size.toString())
+    
+    const url = `/api/logs/system${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+    const response = await api.get(url)
+    return response.data
+  },
+
+  exportLogs: async (params?: { 
+    limit?: number; 
+    level?: string; 
+    category?: string;
+    format?: string;
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.append('limit', params.limit.toString())
+    if (params?.level && params.level !== 'ALL') searchParams.append('level', params.level)
+    if (params?.category && params.category !== 'ALL') searchParams.append('category', params.category)
+    if (params?.format) searchParams.append('format', params.format)
+    
+    const url = `/api/logs/system/export${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
     const response = await api.get(url, { responseType: 'blob' })
     return response.data
   }

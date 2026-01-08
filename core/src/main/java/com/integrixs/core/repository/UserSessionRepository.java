@@ -29,8 +29,10 @@ public class UserSessionRepository {
      * Save a user session to the database
      */
     public UserSession save(UserSession session) {
-        // Initialize timestamps if not set
-        session.initializeTimestamps();
+        // Initialize timestamps if not set - INSERT operation
+        if (session.getCreatedAt() == null) {
+            session.setCreatedAt(LocalDateTime.now());
+        }
         
         // Generate UUID if not set
         if (session.getId() == null) {

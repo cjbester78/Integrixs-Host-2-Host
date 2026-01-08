@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import EnvironmentBadge from '@/components/common/EnvironmentBadge'
 
 const Header: React.FC = () => {
   const navigate = useNavigate()
@@ -68,6 +69,7 @@ const Header: React.FC = () => {
             <h1 className="text-xl font-semibold app-name-gradient">
               Integrixs Host 2 Host
             </h1>
+            <EnvironmentBadge size="sm" />
           </div>
         </div>
 

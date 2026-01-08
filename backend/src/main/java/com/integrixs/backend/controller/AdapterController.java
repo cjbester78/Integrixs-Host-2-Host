@@ -81,11 +81,11 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid parameter from user {}: {}", currentUser, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid parameter: " + e.getMessage(), null));
+                .body(ApiResponse.error("Invalid parameter: " + e.getMessage()));
         } catch (Exception e) {
             logger.error("Error retrieving adapters for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve adapters", null));
+                .body(ApiResponse.error("Failed to retrieve adapters"));
         }
     }
     
@@ -101,7 +101,7 @@ public class AdapterController {
             
             if (adapter.isEmpty()) {
                 return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Adapter not found", null));
+                    .body(ApiResponse.error("Adapter not found"));
             }
             
             return ResponseEntity.ok(new ApiResponse<>(
@@ -112,11 +112,11 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid adapter ID format: {}", id);
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid adapter ID format", null));
+                .body(ApiResponse.error("Invalid adapter ID format"));
         } catch (Exception e) {
             logger.error("Error retrieving adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve adapter", null));
+                .body(ApiResponse.error("Failed to retrieve adapter"));
         }
     }
     
@@ -140,11 +140,11 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid adapter data from user {}: {}", currentUser, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error creating adapter for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to create adapter", null));
+                .body(ApiResponse.error("Failed to create adapter"));
         }
     }
     
@@ -170,11 +170,11 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error updating adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update adapter", null));
+                .body(ApiResponse.error("Failed to update adapter"));
         }
     }
     
@@ -196,11 +196,11 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error updating adapter enabled status {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update adapter enabled status", null));
+                .body(ApiResponse.error("Failed to update adapter enabled status"));
         }
     }
     
@@ -223,16 +223,16 @@ public class AdapterController {
                 ));
             } else {
                 return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Adapter not found", null));
+                    .body(ApiResponse.error("Adapter not found"));
             }
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error deleting adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to delete adapter", null));
+                .body(ApiResponse.error("Failed to delete adapter"));
         }
     }
     
@@ -254,7 +254,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error testing adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
@@ -304,7 +304,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error starting adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
@@ -333,7 +333,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error stopping adapter {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
@@ -357,7 +357,7 @@ public class AdapterController {
             Optional<Adapter> adapterOpt = adapterManagementService.getAdapterById(adapterId);
             if (adapterOpt.isEmpty()) {
                 return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Adapter not found", null));
+                    .body(ApiResponse.error("Adapter not found"));
             }
             
             Adapter adapter = adapterOpt.get();
@@ -371,7 +371,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error retrieving adapter status {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
@@ -418,7 +418,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {}: {}", currentUserId, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error retrieving adapter logs for user {}: {}", currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
@@ -588,7 +588,7 @@ public class AdapterController {
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for adapter {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error retrieving adapter execution history {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()

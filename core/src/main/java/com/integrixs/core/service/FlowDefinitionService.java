@@ -4,6 +4,7 @@ import com.integrixs.core.repository.IntegrationFlowRepository;
 import com.integrixs.core.repository.DeployedFlowRepository;
 import com.integrixs.core.repository.AdapterRepository;
 import com.integrixs.core.repository.FlowUtilityRepository;
+import com.integrixs.core.util.FlowExportCrypto;
 import com.integrixs.shared.model.IntegrationFlow;
 import com.integrixs.shared.model.DeployedFlow;
 import com.integrixs.shared.model.Adapter;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing visual flow definitions and orchestration
@@ -30,18 +32,21 @@ public class FlowDefinitionService {
     private final AdapterRepository adapterRepository;
     private final FlowUtilityRepository utilityRepository;
     private final DeployedFlowSchedulingService deployedFlowSchedulingService;
+    private final FlowExportCrypto flowExportCrypto;
     
     @Autowired
     public FlowDefinitionService(IntegrationFlowRepository flowRepository,
                                 DeployedFlowRepository deployedFlowRepository,
                                 AdapterRepository adapterRepository,
                                 FlowUtilityRepository utilityRepository,
-                                DeployedFlowSchedulingService deployedFlowSchedulingService) {
+                                DeployedFlowSchedulingService deployedFlowSchedulingService,
+                                FlowExportCrypto flowExportCrypto) {
         this.flowRepository = flowRepository;
         this.deployedFlowRepository = deployedFlowRepository;
         this.adapterRepository = adapterRepository;
         this.utilityRepository = utilityRepository;
         this.deployedFlowSchedulingService = deployedFlowSchedulingService;
+        this.flowExportCrypto = flowExportCrypto;
     }
     
     /**
@@ -117,6 +122,12 @@ public class FlowDefinitionService {
             flow.setId(UUID.randomUUID());
         }
         
+        // Clean any embedded adapter configurations to ensure we use database configs
+        if (flow.getFlowDefinition() != null) {
+            Map<String, Object> cleanedDefinition = stripEmbeddedAdapterConfigurations(flow.getFlowDefinition());
+            flow.setFlowDefinition(cleanedDefinition);
+        }
+        
         // Save flow
         UUID id = flowRepository.save(flow);
         flow.setId(id);
@@ -173,6 +184,12 @@ public class FlowDefinitionService {
         
         // Update scheduled run if scheduling enabled
         flow.updateNextScheduledRun();
+        
+        // Clean any embedded adapter configurations to ensure we use database configs
+        if (flow.getFlowDefinition() != null) {
+            Map<String, Object> cleanedDefinition = stripEmbeddedAdapterConfigurations(flow.getFlowDefinition());
+            flow.setFlowDefinition(cleanedDefinition);
+        }
         
         // Update flow
         flowRepository.update(flow);
@@ -267,7 +284,8 @@ public class FlowDefinitionService {
     }
     
     /**
-     * Export flow as JSON
+     * Export flow as encrypted JSON with all linked adapters.
+     * The exported file is encrypted to prevent unauthorized reading.
      */
     public Map<String, Object> exportFlow(UUID id) {
         logger.info("Exporting integration flow: {}", id);
@@ -281,8 +299,10 @@ public class FlowDefinitionService {
         Map<String, Object> exportData = new HashMap<>();
         
         // Export flow metadata
+        exportData.put("id", flow.getId().toString());  // Add unique flow ID for duplicate detection
         exportData.put("name", flow.getName());
         exportData.put("description", flow.getDescription());
+        exportData.put("bankName", flow.getBankName());
         exportData.put("flowDefinition", flow.getFlowDefinition());
         exportData.put("flowType", flow.getFlowType());
         exportData.put("timeoutMinutes", flow.getTimeoutMinutes());
@@ -291,50 +311,284 @@ public class FlowDefinitionService {
         exportData.put("scheduleEnabled", flow.getScheduleEnabled());
         exportData.put("scheduleCron", flow.getScheduleCron());
         
+        // Extract and export all linked adapters
+        Set<UUID> adapterIds = extractAdapterIdsFromFlow(flow.getFlowDefinition());
+        List<Map<String, Object>> adapters = new ArrayList<>();
+        
+        for (UUID adapterId : adapterIds) {
+            Optional<Adapter> adapterOpt = adapterRepository.findById(adapterId);
+            if (adapterOpt.isPresent()) {
+                Adapter adapter = adapterOpt.get();
+                Map<String, Object> adapterData = new HashMap<>();
+                
+                // Export adapter configuration
+                adapterData.put("id", adapter.getId().toString());
+                adapterData.put("name", adapter.getName());
+                adapterData.put("bank", adapter.getBank());
+                adapterData.put("description", adapter.getDescription());
+                adapterData.put("adapterType", adapter.getAdapterType());
+                adapterData.put("direction", adapter.getDirection());
+                adapterData.put("configuration", sanitizeAdapterConfiguration(adapter.getConfiguration()));
+                adapterData.put("active", adapter.isActive());
+                adapterData.put("connectionValidated", adapter.getConnectionValidated());
+                adapterData.put("averageExecutionTimeMs", adapter.getAverageExecutionTimeMs());
+                adapterData.put("successRatePercent", adapter.getSuccessRatePercent());
+                
+                adapters.add(adapterData);
+                logger.debug("Exported adapter: {} ({})", adapter.getName(), adapterId);
+            } else {
+                logger.warn("Referenced adapter not found: {}", adapterId);
+            }
+        }
+        
+        exportData.put("adapters", adapters);
+        logger.info("Exported {} linked adapters with flow", adapters.size());
+        
         // Export metadata
         exportData.put("exportedAt", LocalDateTime.now().toString());
         exportData.put("version", flow.getFlowVersion());
-        exportData.put("exportFormat", "H2H_FLOW_V1");
+        exportData.put("exportFormat", "H2H_FLOW_V2");
         
-        logger.info("Successfully exported integration flow: {}", id);
-        return exportData;
+        // Encrypt the export data for security
+        Map<String, Object> encryptedExport = flowExportCrypto.encryptFlowExport(exportData);
+        
+        logger.info("Successfully exported and encrypted integration flow: {} with {} adapters", id, adapters.size());
+        return encryptedExport;
     }
     
     /**
-     * Import flow from JSON
+     * Extract all adapter IDs referenced in a flow definition
+     */
+    private Set<UUID> extractAdapterIdsFromFlow(Map<String, Object> flowDefinition) {
+        Set<UUID> adapterIds = new HashSet<>();
+        
+        if (flowDefinition == null || !flowDefinition.containsKey("nodes")) {
+            return adapterIds;
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> nodes = (List<Map<String, Object>>) flowDefinition.get("nodes");
+        
+        for (Map<String, Object> node : nodes) {
+            String nodeType = (String) node.get("type");
+            
+            if (nodeType == null) {
+                continue;
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> nodeData = (Map<String, Object>) node.get("data");
+            
+            if (nodeData == null) {
+                continue;
+            }
+            
+            UUID adapterId = null;
+            
+            // Extract adapter ID based on node type
+            switch (nodeType) {
+                case "start":
+                case "start-process":
+                    // START nodes use 'senderAdapter' field
+                    Object senderAdapterObj = nodeData.get("senderAdapter");
+                    if (senderAdapterObj != null) {
+                        adapterId = parseAdapterId(senderAdapterObj.toString());
+                    }
+                    break;
+                    
+                case "end":
+                case "end-process":
+                case "message-end":
+                    // END nodes use 'adapterId' field
+                    Object endAdapterObj = nodeData.get("adapterId");
+                    if (endAdapterObj != null) {
+                        adapterId = parseAdapterId(endAdapterObj.toString());
+                    }
+                    break;
+                    
+                case "adapter":
+                    // Intermediate adapter nodes use 'adapterId' field
+                    Object adapterObj = nodeData.get("adapterId");
+                    if (adapterObj != null) {
+                        adapterId = parseAdapterId(adapterObj.toString());
+                    }
+                    break;
+                    
+                default:
+                    // Check if any other node type has adapter reference
+                    Object anyAdapterObj = nodeData.get("adapterId");
+                    if (anyAdapterObj != null) {
+                        adapterId = parseAdapterId(anyAdapterObj.toString());
+                    }
+                    break;
+            }
+            
+            if (adapterId != null) {
+                adapterIds.add(adapterId);
+                logger.debug("Found adapter reference: {} in node type: {}", adapterId, nodeType);
+            }
+        }
+        
+        logger.debug("Extracted {} adapter IDs from flow definition", adapterIds.size());
+        return adapterIds;
+    }
+    
+    /**
+     * Safely parse adapter ID string to UUID
+     */
+    private UUID parseAdapterId(String adapterIdStr) {
+        try {
+            if (adapterIdStr != null && !adapterIdStr.trim().isEmpty()) {
+                return UUID.fromString(adapterIdStr.trim());
+            }
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid adapter ID format: {}", adapterIdStr);
+        }
+        return null;
+    }
+    
+    /**
+     * Import flow from JSON (supports both encrypted and unencrypted formats)
      */
     public IntegrationFlow importFlow(Map<String, Object> importData, UUID importedBy) {
         logger.info("Importing integration flow by user: {}", importedBy);
+        logger.debug("Import data keys: {}", importData.keySet());
         
-        // Validate import data
-        if (!importData.containsKey("name") || !importData.containsKey("flowDefinition")) {
-            throw new IllegalArgumentException("Import data must contain 'name' and 'flowDefinition'");
+        try {
+            // Check if the import data is encrypted
+            Map<String, Object> actualImportData = importData;
+            if (flowExportCrypto.isEncryptedFlowExport(importData)) {
+                logger.info("Detected encrypted flow export, decrypting...");
+                actualImportData = flowExportCrypto.decryptFlowExport(importData);
+                logger.info("Flow export decrypted successfully");
+            }
+            
+            // Validate import data
+            if (!actualImportData.containsKey("name") || !actualImportData.containsKey("flowDefinition")) {
+                throw new IllegalArgumentException("Import data must contain 'name' and 'flowDefinition'");
+            }
+            
+            // Check export format version and handle adapters if present
+            Object exportFormatObj = actualImportData.getOrDefault("exportFormat", "H2H_FLOW_V1");
+            String exportFormat = exportFormatObj != null ? exportFormatObj.toString() : "H2H_FLOW_V1";
+            logger.info("Export format detected: {} (containsAdapters: {})", exportFormat, actualImportData.containsKey("adapters"));
+            
+            Map<UUID, UUID> adapterIdMapping = new HashMap<>();
+            
+            if ("H2H_FLOW_V2".equals(exportFormat) && actualImportData.containsKey("adapters")) {
+                logger.info("Importing flow with adapters (format version: {})", exportFormat);
+                logger.info("Adapters field found in import data");
+                Object adaptersObj = actualImportData.get("adapters");
+                if (adaptersObj instanceof List<?>) {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> adaptersList = (List<Map<String, Object>>) adaptersObj;
+                        adapterIdMapping = importAdapters(adaptersList, importedBy);
+                    } catch (ClassCastException e) {
+                        logger.warn("Invalid adapters format in import data, skipping adapter import: {}", e.getMessage());
+                    }
+                } else {
+                    logger.warn("Adapters field is not a list, skipping adapter import");
+                }
+            }
+        
+            // Create new flow from import data
+            IntegrationFlow flow = new IntegrationFlow();
+            
+            Object nameObj = actualImportData.get("name");
+            String originalName = nameObj != null ? nameObj.toString() : "Imported Flow";
+            
+            // Check if this flow has already been imported by its unique ID (if available)
+            Object originalIdObj = actualImportData.get("id");
+            if (originalIdObj != null) {
+                try {
+                    UUID originalFlowId = UUID.fromString(originalIdObj.toString());
+                    if (flowRepository.existsByOriginalFlowId(originalFlowId)) {
+                        throw new IllegalArgumentException("Flow '" + originalName + "' (ID: " + originalFlowId + ") has already been imported. Please use a different flow or delete the existing imported flow first.");
+                    }
+                    flow.setOriginalFlowId(originalFlowId);
+                } catch (IllegalArgumentException e) {
+                    logger.warn("Invalid flow ID format in import data: {}", originalIdObj);
+                }
+            }
+            
+            // Use the original name from the export file, not a modified name
+            flow.setName(originalName);
+            
+            Object descObj = actualImportData.getOrDefault("description", "Imported flow");
+            String description = descObj != null ? descObj.toString() : "Imported flow";
+            flow.setDescription(description);
+            
+            // Import bank name if provided
+            Object bankNameObj = actualImportData.get("bankName");
+            if (bankNameObj != null) {
+                String bankName = bankNameObj.toString();
+                flow.setBankName(bankName);
+            }
+            
+            // Update flow definition with new adapter IDs if needed
+            Object flowDefObj = actualImportData.get("flowDefinition");
+            if (!(flowDefObj instanceof Map)) {
+                throw new IllegalArgumentException("flowDefinition must be a valid JSON object");
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> flowDefinition = (Map<String, Object>) flowDefObj;
+            
+            if (!adapterIdMapping.isEmpty()) {
+                flowDefinition = updateFlowDefinitionAdapterIds(flowDefinition, adapterIdMapping);
+            }
+            
+            // Clean any embedded adapter configurations to ensure we use database configs
+            flowDefinition = stripEmbeddedAdapterConfigurations(flowDefinition);
+            
+            flow.setFlowDefinition(flowDefinition);
+            
+            Object flowTypeObj = actualImportData.getOrDefault("flowType", "STANDARD");
+            String flowType = flowTypeObj != null ? flowTypeObj.toString() : "STANDARD";
+            flow.setFlowType(flowType);
+            
+            Object timeoutObj = actualImportData.getOrDefault("timeoutMinutes", 60);
+            Integer timeoutMinutes = 60;
+            if (timeoutObj instanceof Integer) {
+                timeoutMinutes = (Integer) timeoutObj;
+            } else if (timeoutObj instanceof Number) {
+                timeoutMinutes = ((Number) timeoutObj).intValue();
+            }
+            flow.setTimeoutMinutes(timeoutMinutes);
+            
+            Object maxParallelObj = actualImportData.getOrDefault("maxParallelExecutions", 1);
+            Integer maxParallelExecutions = 1;
+            if (maxParallelObj instanceof Integer) {
+                maxParallelExecutions = (Integer) maxParallelObj;
+            } else if (maxParallelObj instanceof Number) {
+                maxParallelExecutions = ((Number) maxParallelObj).intValue();
+            }
+            flow.setMaxParallelExecutions(maxParallelExecutions);
+            
+            Object retryPolicyObj = actualImportData.get("retryPolicy");
+            if (retryPolicyObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> retryPolicy = (Map<String, Object>) retryPolicyObj;
+                flow.setRetryPolicy(retryPolicy);
+            }
+            
+            flow.setScheduleEnabled(false); // Don't import scheduling to prevent conflicts
+            flow.setActive(false); // Import as inactive for safety
+            
+            // Validate imported flow
+            validateFlow(flow);
+            
+            // Create the flow
+            IntegrationFlow createdFlow = createFlow(flow, importedBy);
+            
+            logger.info("Successfully imported integration flow: {} as {} (adapters imported: {})", 
+                        originalName, createdFlow.getId(), adapterIdMapping.size());
+            return createdFlow;
+            
+        } catch (Exception e) {
+            logger.error("Error importing integration flow: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to import flow: " + e.getMessage(), e);
         }
-        
-        // Create new flow from import data
-        IntegrationFlow flow = new IntegrationFlow();
-        
-        String originalName = (String) importData.get("name");
-        String importedName = generateUniqueFlowName(originalName + " (Imported)");
-        
-        flow.setName(importedName);
-        flow.setDescription((String) importData.getOrDefault("description", "Imported flow"));
-        flow.setFlowDefinition((Map<String, Object>) importData.get("flowDefinition"));
-        flow.setFlowType((String) importData.getOrDefault("flowType", "STANDARD"));
-        flow.setTimeoutMinutes((Integer) importData.getOrDefault("timeoutMinutes", 60));
-        flow.setMaxParallelExecutions((Integer) importData.getOrDefault("maxParallelExecutions", 1));
-        flow.setRetryPolicy((Map<String, Object>) importData.get("retryPolicy"));
-        flow.setScheduleEnabled(false); // Don't import scheduling to prevent conflicts
-        flow.setActive(false); // Import as inactive for safety
-        
-        // Validate imported flow
-        validateFlow(flow);
-        
-        // Create the flow
-        IntegrationFlow createdFlow = createFlow(flow, importedBy);
-        
-        logger.info("Successfully imported integration flow: {} as {}", originalName, createdFlow.getId());
-        return createdFlow;
     }
     
     /**
@@ -350,6 +604,340 @@ public class FlowDefinitionService {
         }
         
         return candidateName;
+    }
+    
+    /**
+     * Import adapters from export data
+     */
+    private Map<UUID, UUID> importAdapters(List<Map<String, Object>> adaptersData, UUID importedBy) {
+        logger.info("Starting to import {} adapters", adaptersData.size());
+        Map<UUID, UUID> adapterIdMapping = new HashMap<>();
+        
+        for (Map<String, Object> adapterData : adaptersData) {
+            logger.info("Processing adapter: {}", adapterData.get("name"));
+            try {
+                UUID originalId = UUID.fromString((String) adapterData.get("id"));
+                
+                // Create new adapter with imported configuration
+                Adapter adapter = new Adapter();
+                adapter.setName((String) adapterData.get("name"));
+                adapter.setBank((String) adapterData.get("bank"));
+                adapter.setDescription((String) adapterData.get("description"));
+                adapter.setAdapterType((String) adapterData.get("adapterType"));
+                adapter.setDirection((String) adapterData.get("direction"));
+                // Set configuration with placeholders for sensitive fields that were removed during export
+                Map<String, Object> importedConfig = (Map<String, Object>) adapterData.get("configuration");
+                Map<String, Object> configWithPlaceholders = addPlaceholdersForSensitiveFields(importedConfig, adapter.getAdapterType());
+                adapter.setConfiguration(configWithPlaceholders);
+                // Import as inactive since sensitive configuration fields need to be reconfigured
+                adapter.setActive(false);
+                adapter.setConnectionValidated(false);
+                if (adapterData.get("averageExecutionTimeMs") != null) {
+                    adapter.setAverageExecutionTimeMs(((Number) adapterData.get("averageExecutionTimeMs")).longValue());
+                }
+                if (adapterData.get("successRatePercent") != null) {
+                    adapter.setSuccessRatePercent(new java.math.BigDecimal(adapterData.get("successRatePercent").toString()));
+                }
+                adapter.setCreatedBy(importedBy);
+                adapter.setUpdatedBy(importedBy);
+                
+                // Check if adapter is already imported (prevent duplicates)
+                String originalName = adapter.getName();
+                if (adapterRepository.existsByName(originalName)) {
+                    throw new IllegalArgumentException("Adapter '" + originalName + "' already exists. Please use a different name or delete the existing adapter first.");
+                }
+                
+                // Save the adapter
+                UUID newId = adapterRepository.save(adapter);
+                adapter.setId(newId);
+                
+                // Map old ID to new ID
+                adapterIdMapping.put(originalId, newId);
+                
+                logger.info("Imported adapter: {} -> {} (original: {})", 
+                           originalName, newId, originalId);
+                
+            } catch (Exception e) {
+                logger.error("Failed to import adapter: {}", adapterData.get("name"), e);
+                // Continue with other adapters
+            }
+        }
+        
+        return adapterIdMapping;
+    }
+    
+    /**
+     * Generate unique adapter name
+     */
+    private String generateUniqueAdapterName(String baseName) {
+        String candidateName = baseName;
+        int counter = 1;
+        
+        while (adapterRepository.existsByName(candidateName)) {
+            candidateName = baseName + " (" + counter + ")";
+            counter++;
+        }
+        
+        return candidateName;
+    }
+    
+    /**
+     * Update flow definition with new adapter IDs
+     */
+    private Map<String, Object> updateFlowDefinitionAdapterIds(Map<String, Object> flowDefinition, Map<UUID, UUID> adapterIdMapping) {
+        Map<String, Object> updatedFlowDefinition = new HashMap<>(flowDefinition);
+        
+        // Update adapter IDs in nodes
+        if (updatedFlowDefinition.containsKey("nodes")) {
+            List<Map<String, Object>> nodes = (List<Map<String, Object>>) updatedFlowDefinition.get("nodes");
+            for (Map<String, Object> node : nodes) {
+                if (node.containsKey("data")) {
+                    Map<String, Object> nodeData = (Map<String, Object>) node.get("data");
+                    if (nodeData.containsKey("adapterId")) {
+                        UUID oldAdapterId = parseAdapterId((String) nodeData.get("adapterId"));
+                        if (oldAdapterId != null && adapterIdMapping.containsKey(oldAdapterId)) {
+                            nodeData.put("adapterId", adapterIdMapping.get(oldAdapterId).toString());
+                            logger.debug("Updated adapter ID in node: {} -> {}", oldAdapterId, adapterIdMapping.get(oldAdapterId));
+                        }
+                    }
+                }
+            }
+        }
+        
+        return updatedFlowDefinition;
+    }
+    
+    /**
+     * Sanitize adapter configuration by removing sensitive connection details
+     * while preserving all other configuration settings
+     */
+    private Map<String, Object> sanitizeAdapterConfiguration(Map<String, Object> originalConfig) {
+        if (originalConfig == null || originalConfig.isEmpty()) {
+            return originalConfig;
+        }
+        
+        // Create a copy of the original configuration
+        Map<String, Object> sanitizedConfig = new HashMap<>(originalConfig);
+        
+        // List of sensitive field names to remove (case-insensitive matching)
+        String[] sensitiveFields = {
+            "host", "hostname", "server", "ip", "ipAddress", "serverAddress",
+            "username", "user", "login", "userId", "account",
+            "password", "pwd", "pass", "secret", "key", "token",
+            "directory", "path", "folder", "remotePath", "localPath", 
+            "sourceDirectory", "targetDirectory", "inputDirectory", "outputDirectory",
+            "workingDirectory", "baseDirectory", "rootDirectory"
+        };
+        
+        // Remove sensitive fields (case-insensitive)
+        for (String sensitiveField : sensitiveFields) {
+            sanitizedConfig.entrySet().removeIf(entry -> 
+                entry.getKey() != null && entry.getKey().toLowerCase().contains(sensitiveField.toLowerCase())
+            );
+        }
+        
+        // Also check for nested configurations (like connectionSettings, sftpConfig, etc.)
+        for (Map.Entry<String, Object> entry : sanitizedConfig.entrySet()) {
+            if (entry.getValue() instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nestedConfig = (Map<String, Object>) entry.getValue();
+                entry.setValue(sanitizeAdapterConfiguration(nestedConfig));
+            }
+        }
+        
+        logger.debug("Sanitized adapter configuration: removed sensitive fields, kept {} fields", 
+                    sanitizedConfig.size());
+        return sanitizedConfig;
+    }
+    
+    /**
+     * Strip embedded adapter configurations from flow definition nodes.
+     * This ensures flows only store adapter ID references and always use live database configurations.
+     * 
+     * @param flowDefinition The flow definition map containing nodes and edges
+     * @return Cleaned flow definition with embedded configurations removed
+     */
+    private Map<String, Object> stripEmbeddedAdapterConfigurations(Map<String, Object> flowDefinition) {
+        if (flowDefinition == null || flowDefinition.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        
+        final FlowDefinitionCleaner cleaner = new FlowDefinitionCleaner();
+        return cleaner.cleanFlowDefinition(flowDefinition);
+    }
+    
+    /**
+     * Inner class responsible for cleaning flow definitions according to OOP principles:
+     * - Single Responsibility: Only handles flow definition cleaning
+     * - Immutability: Returns new objects rather than modifying input
+     * - Type Safety: Proper type checking and casting
+     */
+    private static class FlowDefinitionCleaner {
+        
+        private static final Logger logger = LoggerFactory.getLogger(FlowDefinitionCleaner.class);
+        
+        // Immutable set of allowed adapter node properties
+        private static final Set<String> ALLOWED_ADAPTER_PROPERTIES = Set.of(
+            "label", "adapterType", "direction", "adapterId", 
+            "showDeleteButton", "availableTypes"
+        );
+        
+        /**
+         * Clean flow definition by processing all nodes
+         */
+        public Map<String, Object> cleanFlowDefinition(Map<String, Object> originalDefinition) {
+            final Map<String, Object> cleanedDefinition = createDeepCopy(originalDefinition);
+            
+            Optional<List<Map<String, Object>>> nodes = extractNodes(cleanedDefinition);
+            if (nodes.isPresent()) {
+                List<Map<String, Object>> cleanedNodes = nodes.get()
+                    .stream()
+                    .map(this::processNode)
+                    .collect(Collectors.toList());
+                    
+                cleanedDefinition.put("nodes", cleanedNodes);
+                logger.debug("Stripped embedded adapter configurations from {} nodes", cleanedNodes.size());
+            }
+            
+            return cleanedDefinition;
+        }
+        
+        /**
+         * Create a deep copy of the flow definition to ensure immutability
+         */
+        private Map<String, Object> createDeepCopy(Map<String, Object> original) {
+            return new HashMap<>(original);
+        }
+        
+        /**
+         * Safely extract nodes from flow definition with type checking
+         */
+        private Optional<List<Map<String, Object>>> extractNodes(Map<String, Object> flowDefinition) {
+            Object nodesObj = flowDefinition.get("nodes");
+            
+            if (!(nodesObj instanceof List)) {
+                return Optional.empty();
+            }
+            
+            try {
+                @SuppressWarnings("unchecked")
+                List<Object> rawNodes = (List<Object>) nodesObj;
+                
+                List<Map<String, Object>> typedNodes = rawNodes.stream()
+                    .filter(node -> node instanceof Map)
+                    .map(node -> {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> typedNode = (Map<String, Object>) node;
+                        return typedNode;
+                    })
+                    .collect(Collectors.toList());
+                    
+                return Optional.of(typedNodes);
+            } catch (ClassCastException e) {
+                logger.warn("Invalid node structure in flow definition", e);
+                return Optional.empty();
+            }
+        }
+        
+        /**
+         * Process individual node - clean if adapter, pass through if not
+         */
+        private Map<String, Object> processNode(Map<String, Object> node) {
+            if (isAdapterNode(node)) {
+                return cleanAdapterNode(node);
+            }
+            return new HashMap<>(node); // Return immutable copy
+        }
+        
+        /**
+         * Check if node is an adapter type that needs cleaning
+         */
+        private boolean isAdapterNode(Map<String, Object> node) {
+            return "adapter".equals(node.get("type"));
+        }
+        
+        /**
+         * Clean adapter node by removing embedded configurations while preserving references
+         */
+        private Map<String, Object> cleanAdapterNode(Map<String, Object> adapterNode) {
+            Map<String, Object> cleanedNode = new HashMap<>(adapterNode);
+            
+            Optional<Map<String, Object>> nodeData = extractNodeData(adapterNode);
+            if (nodeData.isPresent()) {
+                Map<String, Object> cleanedData = filterAllowedProperties(nodeData.get());
+                cleanedNode.put("data", cleanedData);
+                
+                logger.debug("Cleaned adapter node: {}, removed embedded configuration", 
+                           cleanedData.get("label"));
+            }
+            
+            return cleanedNode;
+        }
+        
+        /**
+         * Safely extract node data with type checking
+         */
+        private Optional<Map<String, Object>> extractNodeData(Map<String, Object> node) {
+            Object dataObj = node.get("data");
+            
+            if (!(dataObj instanceof Map)) {
+                return Optional.empty();
+            }
+            
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> nodeData = (Map<String, Object>) dataObj;
+                return Optional.of(nodeData);
+            } catch (ClassCastException e) {
+                logger.warn("Invalid node data structure", e);
+                return Optional.empty();
+            }
+        }
+        
+        /**
+         * Filter node properties to only include allowed adapter references
+         */
+        private Map<String, Object> filterAllowedProperties(Map<String, Object> nodeData) {
+            return nodeData.entrySet()
+                .stream()
+                .filter(entry -> ALLOWED_ADAPTER_PROPERTIES.contains(entry.getKey()))
+                .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    (existing, replacement) -> existing,
+                    HashMap::new
+                ));
+        }
+    }
+
+    /**
+     * Add placeholders for sensitive fields that were removed during export
+     * This ensures imported adapters have the required configuration structure
+     */
+    private Map<String, Object> addPlaceholdersForSensitiveFields(Map<String, Object> config, String adapterType) {
+        if (config == null) {
+            config = new HashMap<>();
+        }
+        
+        Map<String, Object> configWithPlaceholders = new HashMap<>(config);
+        
+        // Add common placeholders based on adapter type
+        if ("SFTP".equalsIgnoreCase(adapterType)) {
+            configWithPlaceholders.putIfAbsent("host", "CONFIGURE_HOST");
+            configWithPlaceholders.putIfAbsent("username", "CONFIGURE_USERNAME");
+            configWithPlaceholders.putIfAbsent("password", "CONFIGURE_PASSWORD");
+            configWithPlaceholders.putIfAbsent("remotePath", "CONFIGURE_REMOTE_PATH");
+        } else if ("FILE".equalsIgnoreCase(adapterType)) {
+            configWithPlaceholders.putIfAbsent("directory", "CONFIGURE_DIRECTORY");
+            configWithPlaceholders.putIfAbsent("path", "CONFIGURE_PATH");
+        } else if ("EMAIL".equalsIgnoreCase(adapterType)) {
+            configWithPlaceholders.putIfAbsent("host", "CONFIGURE_SMTP_HOST");
+            configWithPlaceholders.putIfAbsent("username", "CONFIGURE_EMAIL_USERNAME");
+            configWithPlaceholders.putIfAbsent("password", "CONFIGURE_EMAIL_PASSWORD");
+        }
+        
+        logger.debug("Added placeholders for {} adapter configuration", adapterType);
+        return configWithPlaceholders;
     }
     
     /**

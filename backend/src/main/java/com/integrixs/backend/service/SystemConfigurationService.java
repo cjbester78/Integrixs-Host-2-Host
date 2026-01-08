@@ -44,6 +44,27 @@ public class SystemConfigurationService {
     }
 
     /**
+     * Alias for getValue - for compatibility with environment config
+     */
+    public String getConfigValue(String configKey, String defaultValue) {
+        return getValue(configKey, defaultValue);
+    }
+
+    /**
+     * Update configuration value and clear cache
+     */
+    @CacheEvict(value = {"systemConfig", "systemConfigInt", "systemConfigBool"}, key = "#configKey")
+    public void updateConfigValue(String configKey, String newValue) {
+        try {
+            configRepository.updateConfigValue(configKey, newValue);
+            logger.info("Updated configuration key '{}' to new value", configKey);
+        } catch (Exception e) {
+            logger.error("Error updating configuration key '{}': {}", configKey, e.getMessage());
+            throw new RuntimeException("Failed to update configuration: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Get integer configuration value with caching
      */
     @Cacheable(value = "systemConfigInt", key = "#configKey")

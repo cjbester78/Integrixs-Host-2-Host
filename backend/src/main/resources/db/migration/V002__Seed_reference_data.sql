@@ -32,7 +32,7 @@ INSERT INTO users (
     gen_random_uuid(),
     'Administrator',
     'admin@integrixlab.com',
-    '$2a$12$9ZShNgwEYkYzBhGBwvBlgOyB5WRd.VD8KVY6kKSUJXVdmtJoJxXIS', -- Int3grix@01
+    '$2a$12$fylwVEhE/Jn4r41BqK/a3.QRzcoSUhlkP5kkgfOjKpJCr1188U5qK', -- Int3grix@01
     'System Administrator',
     'ADMINISTRATOR',
     'UTC',
@@ -107,6 +107,7 @@ INSERT INTO system_configuration (config_key, config_value, config_type, descrip
 ('security.login.lockout_duration_minutes', '30', 'INTEGER', 'Account lockout duration in minutes after max attempts', 'SECURITY', '30', (SELECT id FROM users WHERE username = 'Administrator')),
 ('security.jwt.access_token_expiry_hours', '24', 'INTEGER', 'JWT access token expiry time in hours', 'SECURITY', '24', (SELECT id FROM users WHERE username = 'Administrator')),
 ('security.jwt.refresh_token_expiry_days', '7', 'INTEGER', 'JWT refresh token expiry time in days', 'SECURITY', '7', (SELECT id FROM users WHERE username = 'Administrator')),
+('security.jwt.secret', 'JmQajlkHx5P3Ln+UcOwe2YY92HMJk3zAm6epso/iF1k408dQ56xLrYNfFixtwVnK', 'STRING', 'JWT signing secret key (minimum 64 characters for HS512)', 'SECURITY', 'JmQajlkHx5P3Ln+UcOwe2YY92HMJk3zAm6epso/iF1k408dQ56xLrYNfFixtwVnK', (SELECT id FROM users WHERE username = 'Administrator')),
 
 -- Email/Notification Configuration
 ('notifications.email.enabled', 'false', 'BOOLEAN', 'Enable email notifications', 'NOTIFICATIONS', 'false', (SELECT id FROM users WHERE username = 'Administrator')),

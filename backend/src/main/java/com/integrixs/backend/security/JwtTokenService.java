@@ -1,11 +1,13 @@
 package com.integrixs.backend.security;
 
+import com.integrixs.backend.dto.response.TokenResponse;
 import com.integrixs.backend.model.User;
+import com.integrixs.backend.service.JwtTokenManagementService;
+import com.integrixs.backend.service.SystemConfigurationService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,9 @@ import java.util.Date;
 /**
  * JWT Token Service for authentication and authorization
  * Handles token generation, validation, and extraction of user information
+ * 
+ * @deprecated Use JwtTokenManagementService for new implementations
+ * This class is maintained for backward compatibility and delegates to the new service
  */
 @Service
 public class JwtTokenService {
@@ -25,19 +30,40 @@ public class JwtTokenService {
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenService.class);
     
     private final SecretKey jwtSecret;
-    private final long jwtExpirationMs;
-    private final long refreshTokenExpirationMs;
+    private final SystemConfigurationService configService;
+    private final JwtTokenManagementService tokenManagementService;
 
-    public JwtTokenService(
-            @Value("${h2h.jwt.secret:H2HFileTransferSecretKeyForJWTTokenGeneration2024!}") String secret,
-            @Value("${h2h.jwt.expiration:86400000}") long jwtExpirationMs, // 24 hours
-            @Value("${h2h.jwt.refresh-expiration:604800000}") long refreshTokenExpirationMs) { // 7 days
+    public JwtTokenService(SystemConfigurationService configService, 
+                          JwtTokenManagementService tokenManagementService) {
+        this.configService = configService;
+        this.tokenManagementService = tokenManagementService;
+        
+        // Get JWT secret from database configuration
+        String secret = configService.getValue(
+            "security.jwt.secret", 
+            "H2HFileTransferSecretKeyForJWTTokenGeneration2024!"
+        );
         
         this.jwtSecret = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.jwtExpirationMs = jwtExpirationMs;
-        this.refreshTokenExpirationMs = refreshTokenExpirationMs;
         
-        logger.info("JWT Token Service initialized with expiration: {}ms", jwtExpirationMs);
+        logger.info("JWT Token Service initialized with database configuration");
+        logger.debug("JWT secret length: {} characters", secret.length());
+    }
+
+    /**
+     * Get JWT access token expiration time in milliseconds
+     */
+    private long getJwtExpirationMs() {
+        Integer hours = configService.getIntegerValue("security.jwt.access_token_expiry_hours", 24);
+        return hours * 60L * 60L * 1000L; // Convert hours to milliseconds
+    }
+
+    /**
+     * Get JWT refresh token expiration time in milliseconds
+     */
+    private long getRefreshTokenExpirationMs() {
+        Integer days = configService.getIntegerValue("security.jwt.refresh_token_expiry_days", 7);
+        return days * 24L * 60L * 60L * 1000L; // Convert days to milliseconds
     }
 
     /**
@@ -52,7 +78,7 @@ public class JwtTokenService {
      * Generate JWT token for user
      */
     public String generateToken(User user) {
-        Date expiryDate = new Date(System.currentTimeMillis() + jwtExpirationMs);
+        Date expiryDate = new Date(System.currentTimeMillis() + getJwtExpirationMs());
         
         return Jwts.builder()
                 .setSubject(user.getId().toString())
@@ -72,7 +98,7 @@ public class JwtTokenService {
      * Generate refresh token for user
      */
     public String generateRefreshToken(User user) {
-        Date expiryDate = new Date(System.currentTimeMillis() + refreshTokenExpirationMs);
+        Date expiryDate = new Date(System.currentTimeMillis() + getRefreshTokenExpirationMs());
         
         return Jwts.builder()
                 .setSubject(user.getId().toString())
@@ -153,27 +179,11 @@ public class JwtTokenService {
 
     /**
      * Validate JWT token
+     * @deprecated Use JwtTokenManagementService.validateToken() for detailed validation results
      */
+    @Deprecated
     public boolean validateToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                .setSigningKey(jwtSecret)
-                .build()
-                .parseClaimsJws(token);
-            return true;
-        } catch (SecurityException ex) {
-            logger.error("Invalid JWT signature: {}", ex.getMessage());
-        } catch (MalformedJwtException ex) {
-            logger.error("Invalid JWT token: {}", ex.getMessage());
-        } catch (ExpiredJwtException ex) {
-            logger.warn("Expired JWT token: {}", ex.getMessage());
-        } catch (UnsupportedJwtException ex) {
-            logger.error("Unsupported JWT token: {}", ex.getMessage());
-        } catch (IllegalArgumentException ex) {
-            logger.error("JWT claims string is empty: {}", ex.getMessage());
-        }
-        
-        return false;
+        return tokenManagementService.validateToken(token).isValid();
     }
 
     /**
@@ -232,14 +242,14 @@ public class JwtTokenService {
      * Get JWT token expiration time in milliseconds
      */
     public long getExpirationTime() {
-        return jwtExpirationMs;
+        return getJwtExpirationMs();
     }
     
     /**
      * Get refresh token expiration time in milliseconds
      */
     public long getRefreshExpirationTime() {
-        return refreshTokenExpirationMs;
+        return getRefreshTokenExpirationMs();
     }
 
     /**
@@ -257,25 +267,29 @@ public class JwtTokenService {
 
     /**
      * Create token response with access and refresh tokens
+     * @deprecated Use JwtTokenManagementService.generateTokenResponse() instead
      */
+    @Deprecated
     public TokenResponse createTokenResponse(User user) {
-        String accessToken = generateToken(user);
-        String refreshToken = generateRefreshToken(user);
+        com.integrixs.backend.dto.response.TokenResponse newResponse = tokenManagementService.generateTokenResponse(user);
         
+        // Convert new response to legacy format for backward compatibility
         return new TokenResponse(
-            accessToken,
-            refreshToken,
-            "Bearer",
-            jwtExpirationMs / 1000, // Convert to seconds
-            user.getUsername(),
-            user.getFullName(),
-            user.getRole().name()
+            newResponse.accessToken(),
+            newResponse.refreshToken(),
+            newResponse.tokenType(),
+            newResponse.expiresIn(),
+            newResponse.username(),
+            newResponse.fullName(),
+            newResponse.role()
         );
     }
 
     /**
-     * Token response DTO
+     * @deprecated Moved to com.integrixs.backend.dto.response.TokenResponse
+     * This inner class remains for backward compatibility only
      */
+    @Deprecated
     public static class TokenResponse {
         private String accessToken;
         private String refreshToken;

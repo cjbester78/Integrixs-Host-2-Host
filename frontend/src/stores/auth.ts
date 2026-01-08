@@ -35,20 +35,7 @@ interface AuthState {
 // Helper function to initialize auth state from localStorage immediately
 const getInitialAuthState = () => {
   try {
-    // DETAILED DEBUGGING: Check what's actually in storage
-    const sessionToken = sessionStorage.getItem('h2h_token')
-    const localToken = localStorage.getItem('h2h_token')
-    const sessionUser = sessionStorage.getItem('h2h_user')
-    const localUser = localStorage.getItem('h2h_user')
     const persistLogin = localStorage.getItem('h2h_persist_login') === 'true'
-    
-    console.log('[AuthStore] RAW storage check:', {
-      sessionToken: sessionToken ? `${sessionToken.substring(0, 20)}...` : 'null',
-      localToken: localToken ? `${localToken.substring(0, 20)}...` : 'null',
-      sessionUser: sessionUser ? 'exists' : 'null',
-      localUser: localUser ? 'exists' : 'null',
-      persistLogin
-    })
     
     const token = sessionManager.getToken()
     const user = sessionManager.getUser()
@@ -60,27 +47,14 @@ const getInitialAuthState = () => {
         const payload = JSON.parse(atob(token.split('.')[1]))
         const now = Date.now() / 1000
         isTokenLocallyValid = payload.exp > now
-        console.log('[AuthStore] Token validation:', {
-          tokenExp: payload.exp,
-          currentTime: now,
-          isValid: isTokenLocallyValid
-        })
       } catch (error) {
-        console.warn('[AuthStore] Failed to parse token during initialization:', error)
+        // Token parsing failed, will be treated as invalid
       }
     }
     
     // Based on research: Set isAuthenticated to true if we have valid tokens
     // This prevents the immediate redirect during page refresh
     const hasValidLocalAuth = !!(token && user && isTokenLocallyValid)
-    
-    console.log('[AuthStore] Initial state from storage:', {
-      hasToken: !!token,
-      hasUser: !!user,
-      isTokenLocallyValid,
-      settingAuthenticated: hasValidLocalAuth,
-      persistLogin
-    })
     
     return {
       user,
@@ -110,13 +84,6 @@ export const useAuthStore = create<AuthState>()(
       ...getInitialAuthState(), // Initialize from storage immediately
       
       setAuth: (user: User, token: string, persistLogin = false) => {
-        console.log('[AuthStore] setAuth called:', {
-          username: user?.username,
-          hasToken: !!token,
-          persistLogin,
-          tokenPreview: token ? `${token.substring(0, 20)}...` : 'null'
-        })
-        
         set({
           user,
           token,

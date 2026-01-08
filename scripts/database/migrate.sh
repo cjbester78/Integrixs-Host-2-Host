@@ -14,7 +14,19 @@ DB_SCHEMA="public"
 # Script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MIGRATION_DIR="$PROJECT_ROOT/backend/src/main/resources/db/migration"
+
+# Determine migration directory based on environment
+if [ -d "/opt/h2h/db/migration" ]; then
+    # Production environment
+    MIGRATION_DIR="/opt/h2h/db/migration"
+elif [ -d "$PROJECT_ROOT/backend/src/main/resources/db/migration" ]; then
+    # Development environment
+    MIGRATION_DIR="$PROJECT_ROOT/backend/src/main/resources/db/migration"
+else
+    echo "✗ Migration directory not found in either location"
+    echo "  Expected: /opt/h2h/db/migration (production) or $PROJECT_ROOT/backend/src/main/resources/db/migration (development)"
+    exit 1
+fi
 
 echo "======================================"
 echo "H2H File Transfer - Database Migration"

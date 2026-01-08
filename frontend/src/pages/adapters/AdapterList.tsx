@@ -6,6 +6,7 @@ import { adapterApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { usePermissions } from '@/hooks/auth'
+import { useEnvironment } from '@/hooks/useEnvironment'
 import WebSocketStatus from '@/components/WebSocketStatus'
 import { useNotifications } from '@/stores/ui'
 import {
@@ -35,6 +36,7 @@ interface AdapterInterface {
 
 const AdapterList: React.FC = () => {
   const { isAdmin } = usePermissions()
+  const { data: environment } = useEnvironment()
   const { success, error } = useNotifications()
   const queryClient = useQueryClient()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -100,6 +102,9 @@ const AdapterList: React.FC = () => {
   // Extract the interfaces array from the API response
   const interfaces = apiResponse?.data || []
 
+  // Check if creating adapters is allowed based on admin permissions and environment restrictions
+  const canCreateAdapters = isAdmin() && (environment?.permissions?.canCreateAdapters ?? true)
+
   const getAdapterIcon = (adapterType: string) => {
     switch (adapterType) {
       case 'FILE':
@@ -162,7 +167,7 @@ const AdapterList: React.FC = () => {
             <WebSocketStatus size="sm" />
           </div>
         </div>
-        {isAdmin() && (
+        {canCreateAdapters && (
           <Button asChild className="btn-primary">
             <Link to="/adapters/create">
               <Plus className="h-4 w-4 mr-2" />
@@ -307,7 +312,7 @@ const AdapterList: React.FC = () => {
           <Settings className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-foreground mb-2">No Adapters Configured</h3>
           <p className="text-muted-foreground mb-6">Get started by creating your first adapter interface</p>
-          {isAdmin() && (
+          {canCreateAdapters && (
             <Button asChild className="btn-primary">
               <Link to="/adapters/create">
                 <Plus className="h-4 w-4 mr-2" />

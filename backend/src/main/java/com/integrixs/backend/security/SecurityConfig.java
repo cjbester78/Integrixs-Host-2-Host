@@ -137,6 +137,9 @@ public class SecurityConfig {
                 
                 // Configuration endpoints (Admin only)
                 .requestMatchers("/api/config/**").hasAuthority("ADMINISTRATOR")
+                // Environment reading is allowed for all authenticated users (for UI badge)
+                .requestMatchers(HttpMethod.GET, "/api/system/environment").hasAnyAuthority("ADMINISTRATOR", "VIEWER")
+                .requestMatchers(HttpMethod.GET, "/api/system/environment/permissions/**").hasAnyAuthority("ADMINISTRATOR", "VIEWER")
                 .requestMatchers("/api/system/**").hasAuthority("ADMINISTRATOR")
                 
                 // Viewer can read most endpoints
@@ -164,46 +167,18 @@ public class SecurityConfig {
     }
 
     /**
-     * CORS configuration for frontend integration
+     * CORS configuration - allows all origins for development and production
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow specific origins (configure for your frontend)
-        configuration.setAllowedOriginPatterns(List.of(
-            "http://localhost:3000",     // React dev server
-            "http://localhost:5173",     // Vite dev server
-            "http://localhost:8080",     // Local backend serving frontend
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173",
-            "http://127.0.0.1:8080",     // Local backend serving frontend
-            "https://localhost:*",       // HTTPS development
-            "https://127.0.0.1:*",
-            "https://49389ba1-4043-4ed2-8188-f375c842a571.lovableproject.com", // Frontend deployment
-            "https://nonportable-astrictively-lorelai.ngrok-free.dev", // ngrok tunnel
-            "https://*.ngrok.io",        // All ngrok tunnels
-            "https://*.ngrok-free.app"   // All ngrok free app tunnels
-        ));
-        
-        // Allow all HTTP methods
-        configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"
-        ));
-        
-        // Allow all headers
+        // Allow all origins, methods, and headers
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
-        
-        // Allow credentials (for cookies, authorization headers)
         configuration.setAllowCredentials(true);
-        
-        // Cache preflight response for 1 hour
-        configuration.setMaxAge(3600L);
-        
-        // Expose headers that frontend might need
-        configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", "Content-Type", "X-Total-Count", "X-Page-Number", "ngrok-skip-browser-warning"
-        ));
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

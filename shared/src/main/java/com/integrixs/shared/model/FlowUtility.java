@@ -3,6 +3,7 @@ package com.integrixs.shared.model;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -32,6 +33,7 @@ public class FlowUtility {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private UUID createdBy;
+    private UUID updatedBy;
     
     // Enums
     public enum UtilityType {
@@ -88,7 +90,9 @@ public class FlowUtility {
         this.maxFileSizeMb = 0; // unlimited
         this.active = true;
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt and updatedBy should be NULL on creation - only set on actual updates
+        this.updatedAt = null;
+        this.updatedBy = null;
     }
     
     public FlowUtility(String name, UtilityType utilityType, String description, 
@@ -101,6 +105,15 @@ public class FlowUtility {
         this.configurationSchema = configurationSchema;
         this.defaultConfiguration = defaultConfiguration;
         this.createdBy = createdBy;
+    }
+    
+    /**
+     * Mark entity as updated by specified user. Should be called for all business logic updates.
+     * This properly maintains the audit trail for UPDATE operations.
+     */
+    public void markAsUpdated(UUID updatedBy) {
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = Objects.requireNonNull(updatedBy, "Updated by cannot be null");
     }
     
     // Business logic methods
@@ -220,13 +233,11 @@ public class FlowUtility {
     
     public void updateFormatSupport(List<String> formats) {
         this.supportedFormats = formats;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public void updateConfiguration(Map<String, Object> newSchema, Map<String, Object> newDefaults) {
         this.configurationSchema = newSchema;
         this.defaultConfiguration = newDefaults;
-        this.updatedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
@@ -268,7 +279,6 @@ public class FlowUtility {
     
     public void setConfigurationSchema(Map<String, Object> configurationSchema) {
         this.configurationSchema = configurationSchema;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public Map<String, Object> getDefaultConfiguration() {
@@ -277,7 +287,6 @@ public class FlowUtility {
     
     public void setDefaultConfiguration(Map<String, Object> defaultConfiguration) {
         this.defaultConfiguration = defaultConfiguration;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public Boolean getSupportsParallel() {
@@ -314,7 +323,6 @@ public class FlowUtility {
     
     public void setActive(Boolean active) {
         this.active = active;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public boolean isActive() {
@@ -325,6 +333,10 @@ public class FlowUtility {
         return createdAt;
     }
     
+    /**
+     * Sets the creation timestamp. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -333,6 +345,10 @@ public class FlowUtility {
         return updatedAt;
     }
     
+    /**
+     * Sets the update timestamp. Should only be used during UPDATE operations by persistence layer.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
@@ -341,8 +357,21 @@ public class FlowUtility {
         return createdBy;
     }
     
+    /**
+     * Sets the user who created this entity. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedBy(UUID createdBy) {
         this.createdBy = createdBy;
+    }
+    
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+    
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
     }
     
     @Override

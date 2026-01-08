@@ -17,12 +17,12 @@ import { Button } from '@/components/ui/button'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
-  { name: 'Adapters', href: '/adapters', icon: Boxes, section: 'integration' },
+  { name: 'Adapters', href: '/adapters', icon: Boxes, adminOnly: true, section: 'integration' },
   { name: 'Flow Management', href: '/flows', icon: Workflow, adminOnly: true, section: 'integration' },
   { name: 'Adapter Monitoring', href: '/adapter-monitoring', icon: Activity, section: 'monitoring' },
-  { name: 'Flow Monitoring', href: '/flow-monitoring', icon: BarChart3, adminOnly: true, section: 'monitoring' },
+  { name: 'Flow Monitoring', href: '/flow-monitoring', icon: BarChart3, section: 'monitoring' },
   { name: 'Administration', href: '/admin', icon: Database, adminOnly: true, section: 'system' },
-  { name: 'Settings', href: '/settings', icon: Settings, adminOnly: true, section: 'system' },
+  { name: 'Settings', href: '/settings', icon: Settings, section: 'system' },
 ]
 
 const Sidebar: React.FC = () => {

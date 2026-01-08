@@ -13,7 +13,7 @@
     <artifactId>core</artifactId>
     <packaging>jar</packaging>
 
-    <name>H2H Core</name>
+    <name>Core</name>
     <description>Core SFTP operations, configuration management, and logging</description>
 
     <dependencies>

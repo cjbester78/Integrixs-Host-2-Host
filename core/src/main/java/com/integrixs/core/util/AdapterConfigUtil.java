@@ -231,7 +231,7 @@ public class AdapterConfigUtil {
      */
     public static void validateFileConfig(Map<String, Object> config, String adapterType, String direction) {
         if ("SENDER".equalsIgnoreCase(direction)) {
-            validateRequiredString(config, "localDirectory", adapterType + " sender");
+            validateRequiredString(config, "sourceDirectory", adapterType + " sender");
             validateRequiredString(config, "filePattern", adapterType + " sender");
         } else if ("RECEIVER".equalsIgnoreCase(direction)) {
             validateRequiredString(config, "targetDirectory", adapterType + " receiver");

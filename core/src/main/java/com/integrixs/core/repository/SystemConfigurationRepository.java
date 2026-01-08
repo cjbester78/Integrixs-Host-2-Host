@@ -163,6 +163,61 @@ public class SystemConfigurationRepository {
     }
 
     /**
+     * Update configuration value by key (UPSERT - insert if not exists)
+     */
+    public void updateConfigValue(String configKey, String newValue) {
+        try {
+            String currentUserId = com.integrixs.shared.util.AuditUtils.getCurrentUserId();
+            
+            // First try to update existing record
+            String updateSql = """
+                UPDATE system_configuration 
+                SET config_value = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?::uuid
+                WHERE config_key = ?
+                """;
+            
+            int rowsUpdated = jdbcTemplate.update(updateSql, newValue, currentUserId, configKey);
+            
+            // If no rows were updated, insert new record
+            if (rowsUpdated == 0) {
+                String insertSql = """
+                    INSERT INTO system_configuration (
+                        id, config_key, config_value, config_type, description, category, default_value, is_readonly, 
+                        created_at, created_by
+                    ) 
+                    VALUES (
+                        gen_random_uuid(), ?, ?, 'STRING', ?, 'SYSTEM', ?, false,
+                        CURRENT_TIMESTAMP, ?::uuid
+                    )
+                    """;
+                
+                String description = switch (configKey) {
+                    case "system.environment.type" -> "Current environment type (DEVELOPMENT, TESTING, PRODUCTION)";
+                    case "system.environment.enforce_restrictions" -> "Whether to enforce environment-based restrictions";
+                    case "system.environment.restriction_message" -> "Message template for environment restriction warnings";
+                    default -> "Auto-generated configuration value";
+                };
+                
+                String defaultValue = switch (configKey) {
+                    case "system.environment.type" -> "DEVELOPMENT";
+                    case "system.environment.enforce_restrictions" -> "true";
+                    case "system.environment.restriction_message" -> "This action is not allowed in %s environment";
+                    default -> newValue;
+                };
+                
+                jdbcTemplate.update(insertSql, configKey, newValue, description, defaultValue, currentUserId);
+                logger.info("Inserted new configuration key '{}' with value", configKey);
+            } else {
+                logger.debug("Updated existing configuration key '{}' with new value", configKey);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error updating/inserting configuration key '{}': {}", configKey, e.getMessage());
+            throw new RuntimeException("Failed to update configuration value", e);
+        }
+    }
+
+    /**
      * Save or update configuration
      */
     public SystemConfiguration save(SystemConfiguration config) {

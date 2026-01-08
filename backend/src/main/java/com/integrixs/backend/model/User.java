@@ -36,7 +36,8 @@ public class User implements UserDetails {
     // User roles enum
     public enum UserRole {
         ADMINISTRATOR("Administrator - Full access to all features"),
-        VIEWER("Viewer - Read-only access to monitoring and logs");
+        VIEWER("Viewer - Read-only access to monitoring and logs"),
+        INTEGRATOR("Integrator - System role for automated flow execution");
 
         private final String description;
 
@@ -98,8 +99,16 @@ public class User implements UserDetails {
         return role == UserRole.VIEWER;
     }
 
+    public boolean isIntegrator() {
+        return role == UserRole.INTEGRATOR;
+    }
+
     public boolean hasFullAccess() {
         return isAdministrator();
+    }
+
+    public boolean canExecuteFlows() {
+        return isIntegrator() || isAdministrator();
     }
 
     public void updateLastLogin() {

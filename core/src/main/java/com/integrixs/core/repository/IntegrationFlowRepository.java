@@ -48,7 +48,7 @@ public class IntegrationFlowRepository {
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, created_at, updated_at, created_by, updated_by
+                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
             FROM integration_flows 
             ORDER BY created_at DESC
         """;
@@ -65,7 +65,7 @@ public class IntegrationFlowRepository {
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, created_at, updated_at, created_by, updated_by
+                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
             FROM integration_flows 
             WHERE active = ?
             ORDER BY name ASC
@@ -101,7 +101,7 @@ public class IntegrationFlowRepository {
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, created_at, updated_at, created_by, updated_by
+                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
             FROM integration_flows 
             WHERE id = ?
         """;
@@ -123,7 +123,7 @@ public class IntegrationFlowRepository {
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, created_at, updated_at, created_by, updated_by
+                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
             FROM integration_flows 
             WHERE name = ?
         """;
@@ -146,6 +146,15 @@ public class IntegrationFlowRepository {
     }
     
     /**
+     * Check if flow has been imported by original flow ID
+     */
+    public boolean existsByOriginalFlowId(UUID originalFlowId) {
+        String sql = "SELECT COUNT(*) FROM integration_flows WHERE original_flow_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, originalFlowId);
+        return count != null && count > 0;
+    }
+    
+    /**
      * Save flow (insert)
      */
     public UUID save(IntegrationFlow flow) {
@@ -163,11 +172,22 @@ public class IntegrationFlowRepository {
                 max_parallel_executions, timeout_minutes, retry_policy,
                 total_executions, successful_executions, failed_executions, 
                 average_execution_time_ms, schedule_enabled, schedule_cron, 
-                next_scheduled_run, active, created_at, created_by
-            ) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                next_scheduled_run, active, original_flow_id, created_at, created_by
+            ) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
-        String createdBy = AuditUtils.getCurrentUserId();
+        String createdByStr = AuditUtils.getCurrentUserId();
+        UUID createdBy;
+        try {
+            createdBy = UUID.fromString(createdByStr);
+        } catch (IllegalArgumentException e) {
+            // If still not a valid UUID, use the createdBy from the flow object if available
+            if (flow.getCreatedBy() != null) {
+                createdBy = flow.getCreatedBy();
+            } else {
+                throw new RuntimeException("Unable to determine valid user ID for audit trail: " + createdByStr);
+            }
+        }
         
         jdbcTemplate.update(sql,
             flow.getId(),
@@ -188,6 +208,7 @@ public class IntegrationFlowRepository {
             flow.getScheduleCron(),
             flow.getNextScheduledRun(),
             flow.getActive(),
+            flow.getOriginalFlowId(),
             flow.getCreatedAt(),
             createdBy
         );
@@ -204,7 +225,18 @@ public class IntegrationFlowRepository {
      */
     public void update(IntegrationFlow flow) {
         flow.setUpdatedAt(LocalDateTime.now());
-        String updatedBy = AuditUtils.getCurrentUserId();
+        String updatedByStr = AuditUtils.getCurrentUserId();
+        UUID updatedBy;
+        try {
+            updatedBy = UUID.fromString(updatedByStr);
+        } catch (IllegalArgumentException e) {
+            // If still not a valid UUID, use the updatedBy from the flow object if available
+            if (flow.getUpdatedBy() != null) {
+                updatedBy = flow.getUpdatedBy();
+            } else {
+                throw new RuntimeException("Unable to determine valid user ID for audit trail: " + updatedByStr);
+            }
+        }
         
         String sql = """
             UPDATE integration_flows SET
@@ -421,6 +453,11 @@ public class IntegrationFlowRepository {
         }
         
         flow.setActive(rs.getBoolean("active"));
+        
+        String originalFlowId = rs.getString("original_flow_id");
+        if (originalFlowId != null) {
+            flow.setOriginalFlowId(UUID.fromString(originalFlowId));
+        }
         
         Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {

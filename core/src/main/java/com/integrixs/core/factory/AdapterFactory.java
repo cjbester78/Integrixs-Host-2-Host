@@ -1,26 +1,33 @@
 package com.integrixs.core.factory;
 
 import com.integrixs.core.adapter.AdapterExecutor;
-import com.integrixs.core.adapter.email.EmailReceiverAdapter;
-import com.integrixs.core.adapter.file.FileReceiverAdapter;
-import com.integrixs.core.adapter.file.FileSenderAdapter;
-import com.integrixs.core.adapter.sftp.SftpReceiverAdapter;
-import com.integrixs.core.adapter.sftp.SftpSenderAdapter;
+import com.integrixs.core.adapter.AdapterExecutorFactory;
 import com.integrixs.shared.model.Adapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 /**
- * Factory class for creating appropriate adapter executors.
- * Implements Factory Method pattern to instantiate the correct
- * adapter executor based on type and direction.
+ * Legacy factory class for backward compatibility.
+ * Delegates to the new DI-based AdapterExecutorFactory for proper OOP design.
  * 
- * This eliminates the need for switch statements and large 
- * conditional logic in the service layer.
+ * @deprecated Use AdapterExecutorFactory directly for better testability and DI support
  */
+@Deprecated
+@Component
 public class AdapterFactory {
     
     private static final Logger logger = LoggerFactory.getLogger(AdapterFactory.class);
+    
+    private static AdapterExecutorFactory executorFactory;
+    
+    @Autowired
+    public void setExecutorFactory(AdapterExecutorFactory factory) {
+        AdapterFactory.executorFactory = factory;
+    }
     
     /**
      * Create the appropriate adapter executor based on adapter type and direction.
@@ -31,28 +38,17 @@ public class AdapterFactory {
      * @throws UnsupportedOperationException if adapter type/direction combination is not supported
      */
     public static AdapterExecutor createExecutor(String adapterType, String direction) {
-        if (adapterType == null || direction == null) {
-            throw new IllegalArgumentException("Adapter type and direction cannot be null");
+        if (executorFactory == null) {
+            throw new IllegalStateException("AdapterExecutorFactory not initialized - check Spring configuration");
         }
         
-        String type = adapterType.toUpperCase().trim();
-        String dir = direction.toUpperCase().trim();
+        Optional<AdapterExecutor> executor = executorFactory.createExecutor(adapterType, direction);
         
-        logger.debug("Creating adapter executor for type: {}, direction: {}", type, dir);
-        
-        switch (type) {
-            case "SFTP":
-                return createSftpExecutor(dir);
-                
-            case "FILE":
-                return createFileExecutor(dir);
-                
-            case "EMAIL":
-                return createEmailExecutor(dir);
-                
-            default:
-                throw new UnsupportedOperationException(
-                    String.format("Unsupported adapter type: %s", adapterType));
+        if (executor.isPresent()) {
+            return executor.get();
+        } else {
+            throw new UnsupportedOperationException(
+                String.format("Unsupported adapter type/direction combination: %s %s", adapterType, direction));
         }
     }
     
@@ -72,64 +68,6 @@ public class AdapterFactory {
     }
     
     /**
-     * Create SFTP adapter executor based on direction.
-     */
-    private static AdapterExecutor createSftpExecutor(String direction) {
-        switch (direction) {
-            case "SENDER":
-                logger.debug("Creating SFTP Sender adapter executor");
-                return new SftpSenderAdapter();
-                
-            case "RECEIVER":
-                logger.debug("Creating SFTP Receiver adapter executor");
-                return new SftpReceiverAdapter();
-                
-            default:
-                throw new UnsupportedOperationException(
-                    String.format("Unsupported SFTP adapter direction: %s", direction));
-        }
-    }
-    
-    /**
-     * Create File adapter executor based on direction.
-     */
-    private static AdapterExecutor createFileExecutor(String direction) {
-        switch (direction) {
-            case "SENDER":
-                logger.debug("Creating File Sender adapter executor");
-                return new FileSenderAdapter();
-                
-            case "RECEIVER":
-                logger.debug("Creating File Receiver adapter executor");
-                return new FileReceiverAdapter();
-                
-            default:
-                throw new UnsupportedOperationException(
-                    String.format("Unsupported File adapter direction: %s", direction));
-        }
-    }
-    
-    /**
-     * Create Email adapter executor based on direction.
-     * Note: EMAIL adapters only support RECEIVER direction (sending emails with attachments).
-     */
-    private static AdapterExecutor createEmailExecutor(String direction) {
-        switch (direction) {
-            case "RECEIVER":
-                logger.debug("Creating Email Receiver adapter executor");
-                return new EmailReceiverAdapter();
-                
-            case "SENDER":
-                throw new UnsupportedOperationException(
-                    "Email sender adapters are not supported in this application (EMAIL is receiver-only)");
-                
-            default:
-                throw new UnsupportedOperationException(
-                    String.format("Unsupported Email adapter direction: %s", direction));
-        }
-    }
-    
-    /**
      * Check if an adapter type and direction combination is supported.
      * 
      * @param adapterType The adapter type
@@ -137,16 +75,12 @@ public class AdapterFactory {
      * @return true if combination is supported
      */
     public static boolean isSupported(String adapterType, String direction) {
-        try {
-            createExecutor(adapterType, direction);
-            return true;
-        } catch (UnsupportedOperationException e) {
-            return false;
-        } catch (Exception e) {
-            logger.warn("Error checking adapter support for {}:{} - {}", 
-                       adapterType, direction, e.getMessage());
+        if (executorFactory == null) {
+            logger.warn("AdapterExecutorFactory not initialized - returning false for isSupported check");
             return false;
         }
+        
+        return executorFactory.isSupported(adapterType, direction);
     }
     
     /**
@@ -155,7 +89,12 @@ public class AdapterFactory {
      * @return Array of supported adapter types
      */
     public static String[] getSupportedTypes() {
-        return new String[]{"SFTP", "FILE", "EMAIL"};
+        if (executorFactory == null) {
+            logger.warn("AdapterExecutorFactory not initialized - returning empty array");
+            return new String[0];
+        }
+        
+        return executorFactory.getSupportedTypes();
     }
     
     /**
@@ -165,19 +104,11 @@ public class AdapterFactory {
      * @return Array of supported directions for the type
      */
     public static String[] getSupportedDirections(String adapterType) {
-        if (adapterType == null) {
+        if (executorFactory == null) {
+            logger.warn("AdapterExecutorFactory not initialized - returning empty array");
             return new String[0];
         }
         
-        switch (adapterType.toUpperCase()) {
-            case "SFTP":
-                return new String[]{"SENDER", "RECEIVER"};
-            case "FILE":
-                return new String[]{"SENDER", "RECEIVER"};
-            case "EMAIL":
-                return new String[]{"RECEIVER"}; // EMAIL only supports RECEIVER direction
-            default:
-                return new String[0];
-        }
+        return executorFactory.getSupportedDirections(adapterType);
     }
 }

@@ -53,8 +53,8 @@ const NodeSidebar: React.FC<NodeSidebarProps> = ({
         label: 'Sender Adapter',
         adapterType: null,
         direction: 'SENDER',
-        availableTypes: ['FILE', 'SFTP'],
-        configuration: {}
+        availableTypes: ['FILE', 'SFTP']
+        // REMOVED: configuration embedding - adapters should only store IDs
       }
     },
     {
@@ -68,8 +68,8 @@ const NodeSidebar: React.FC<NodeSidebarProps> = ({
         label: 'Receiver Adapter',
         adapterType: null,
         direction: 'RECEIVER',
-        availableTypes: ['FILE', 'SFTP', 'EMAIL'],
-        configuration: {}
+        availableTypes: ['FILE', 'SFTP', 'EMAIL']
+        // REMOVED: configuration embedding - adapters should only store IDs
       }
     },
     // Events

@@ -59,10 +59,6 @@ public class H2HBackendApplication {
             	Profile(s): {}
             	Context:    {}
             ----------------------------------------------------------
-            
-            Default Admin Credentials:
-            	Username: Administrator
-            	Password: Int3grix@01
             	
             API Documentation:
             	Health:     {}://localhost:{}/api/health
@@ -80,5 +76,13 @@ public class H2HBackendApplication {
             protocol, serverPort,
             protocol, serverPort
         );
+        
+        // Log credentials to console only (not to database/files) and only in dev mode
+        if ("dev".equals(activeProfiles)) {
+            System.out.println("\n[DEV MODE] Default Admin Credentials:");
+            System.out.println("Username: Administrator");
+            System.out.println("Password: Int3grix@01");
+            System.out.println("Note: Change default credentials before production deployment!\n");
+        }
     }
 }

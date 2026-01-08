@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, FileText, CheckCircle, Clock, TrendingUp, AlertTriangle, RefreshCw, Boxes, Play } from 'lucide-react'
 import { dashboardApi, configApi } from '@/lib/api'
@@ -314,13 +315,11 @@ export const Dashboard: React.FC = () => {
               <Play className="h-4 w-4 mr-2" />
               Manually Execute Flow
             </Button>
-            <Button variant="outline" className="w-full justify-start" size="lg">
-              <FileText className="h-4 w-4 mr-2" />
-              View System Logs
-            </Button>
-            <Button variant="outline" className="w-full justify-start" size="lg">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Dashboard
+            <Button variant="outline" className="w-full justify-start" size="lg" asChild>
+              <Link to="/admin?tab=logs">
+                <FileText className="h-4 w-4 mr-2" />
+                View System Logs
+              </Link>
             </Button>
           </div>
 

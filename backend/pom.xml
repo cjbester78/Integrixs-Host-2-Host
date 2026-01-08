@@ -13,7 +13,7 @@
     <artifactId>backend</artifactId>
     <packaging>jar</packaging>
 
-    <name>H2H Backend</name>
+    <name>Backend</name>
     <description>Spring Boot REST API for H2H File Transfer management and monitoring</description>
 
     <dependencies>

@@ -15,6 +15,8 @@ import com.integrixs.core.logging.EnhancedLogger;
 import com.integrixs.core.logging.CorrelationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class FlowExecutionService {
     
     private static final Logger logger = LoggerFactory.getLogger(FlowExecutionService.class);
     private final EnhancedLogger enhancedLogger = EnhancedLogger.getLogger(FlowExecutionService.class);
+    private static final Marker FLOW_EXECUTION_MARKER = MarkerFactory.getMarker("FLOW_EXECUTION");
     
     private final FlowExecutionRepository executionRepository;
     private final FlowExecutionStepRepository stepRepository;
@@ -160,7 +163,7 @@ public class FlowExecutionService {
         enhancedLogger.adapterMessageEntry("FLOW", triggeredBy != null ? triggeredBy.toString() : "system");
         enhancedLogger.moduleProcessing("h2h/flow-execution/" + flowId.toString().substring(0, 8));
         
-        logger.info("{} execution requested for flow: {} by user: {}", 
+        logger.info(FLOW_EXECUTION_MARKER, "{} execution requested for flow: {} by user: {}", 
                    triggerType.name().toLowerCase(), flowId, triggeredBy);
         
         // Check if flow can execute using deployment registry
@@ -243,15 +246,15 @@ public class FlowExecutionService {
         execution.getExecutionContext().put("correlationId", CorrelationContext.getCorrelationId());
         
         // Business-friendly logging - flow execution start
-        logger.info("Starting async execution for flow {}", flow.getName());
-        logger.info("Application attempting to send message asynchronously using connection FlowExecution-{}", execution.getId().toString().substring(0, 8));
-        logger.info("Trying to put the message into the processing queue");
+        logger.info(FLOW_EXECUTION_MARKER, "Starting async execution for flow {}", flow.getName());
+        logger.info(FLOW_EXECUTION_MARKER, "Application attempting to send message asynchronously using connection FlowExecution-{}", execution.getId().toString().substring(0, 8));
+        logger.info(FLOW_EXECUTION_MARKER, "Trying to put the message into the processing queue");
         
         // Execute flow asynchronously with deployment context
         executeFlowAsync(execution, flow);
         
         // Business-friendly logging - message queued successfully  
-        logger.info("The message was successfully retrieved from the processing queue");
+        logger.info(FLOW_EXECUTION_MARKER, "The message was successfully retrieved from the processing queue");
         
         // Send WebSocket notification
         webSocketService.sendFlowExecutionUpdate(execution);
@@ -314,14 +317,14 @@ public class FlowExecutionService {
             CorrelationContext.setFlowName(execution.getFlowName());
         }
         
-        logger.info("Starting async execution: {} for flow: {}", execution.getId(), flow.getId());
-        logger.info("The message was successfully retrieved from the processing queue");
+        logger.info(FLOW_EXECUTION_MARKER, "Starting async execution: {} for flow: {}", execution.getId(), flow.getId());
+        logger.info(FLOW_EXECUTION_MARKER, "The message was successfully retrieved from the processing queue");
         
         try {
             // Start execution
             execution.start();
             executionRepository.updateStatus(execution.getId(), FlowExecution.ExecutionStatus.RUNNING);
-            logger.info("Execution status changed to RUNNING");
+            logger.info(FLOW_EXECUTION_MARKER, "Execution status changed to RUNNING");
             
             // Send WebSocket update for execution start
             webSocketService.sendFlowExecutionUpdate(execution);
@@ -333,14 +336,14 @@ public class FlowExecutionService {
             }
             
             // Execute flow steps with business-friendly logging
-            logger.info("Executing flow steps for {}", flow.getName());
+            logger.info(FLOW_EXECUTION_MARKER, "Executing flow steps for {}", flow.getName());
             executeFlowSteps(execution, flow);
             
             // Collect file metrics from execution steps before completing
             updateExecutionFileMetrics(execution);
             
             // Complete execution with business-friendly logging
-            logger.info("Flow execution completed successfully");
+            logger.info(FLOW_EXECUTION_MARKER, "Flow execution completed successfully");
             
             execution.complete();
             executionRepository.updateCompletion(execution.getId(), 
@@ -359,7 +362,7 @@ public class FlowExecutionService {
             // Send WebSocket update for execution completion
             webSocketService.sendFlowExecutionUpdate(execution);
             
-            logger.info("Flow execution completed successfully: {}", execution.getId());
+            logger.info(FLOW_EXECUTION_MARKER, "Flow execution completed successfully: {}", execution.getId());
             
         } catch (Exception e) {
             logger.error("Flow execution failed: {}: {}", execution.getId(), e.getMessage(), e);
@@ -391,7 +394,7 @@ public class FlowExecutionService {
     }
     
     /**
-     * Retry failed execution
+     * Retry failed execution - updates the existing execution instead of creating a new one
      */
     public FlowExecution retryExecution(UUID executionId, UUID triggeredBy) {
         logger.info("Retry requested for execution: {} by user: {}", executionId, triggeredBy);
@@ -401,40 +404,40 @@ public class FlowExecutionService {
             throw new IllegalArgumentException("Execution with ID " + executionId + " not found");
         }
         
-        FlowExecution original = originalOpt.get();
-        if (!original.canRetry()) {
+        FlowExecution execution = originalOpt.get();
+        if (!execution.canRetry()) {
             throw new IllegalArgumentException("Execution " + executionId + " cannot be retried");
         }
         
         // Get the flow
-        Optional<IntegrationFlow> flowOpt = flowRepository.findById(original.getFlowId());
+        Optional<IntegrationFlow> flowOpt = flowRepository.findById(execution.getFlowId());
         if (flowOpt.isEmpty()) {
             throw new IllegalArgumentException("Original flow not found for execution " + executionId);
         }
         
-        // Create new execution for retry with message ID preservation
-        FlowExecution retryExecution = new FlowExecution(original.getFlowId(), original.getFlowName(), 
-                                                         FlowExecution.TriggerType.RETRY, triggeredBy);
-        retryExecution.setPayload(original.getPayload());
-        retryExecution.setParentExecutionId(executionId);
-        retryExecution.setRetryAttempt(original.getRetryAttempt() + 1);
-        retryExecution.setCorrelationId(original.getCorrelationId());
-        retryExecution.setPriority(original.getPriority());
+        // Update the existing execution for retry
+        execution.setTriggerType(FlowExecution.TriggerType.RETRY);
+        execution.setTriggeredBy(triggeredBy);
+        execution.setRetryAttempt(execution.getRetryAttempt() + 1);
+        execution.setErrorMessage(null); // Clear previous error message
+        execution.setCompletedAt(null); // Reset completion time
+        execution.setStartedAt(LocalDateTime.now()); // Set new start time for retry
+        execution.setExecutionStatus(FlowExecution.ExecutionStatus.PENDING); // Reset status
         
-        // Preserve original execution context including message ID for traceability
-        if (original.getExecutionContext() != null) {
-            retryExecution.setExecutionContext(new HashMap<>(original.getExecutionContext()));
+        // Update the execution record to reflect retry state
+        executionRepository.update(execution);
+        
+        // Clear any existing execution steps for the retry
+        int deletedSteps = stepRepository.deleteByExecutionId(executionId);
+        if (deletedSteps > 0) {
+            logger.info("Cleared {} existing steps for retry of execution: {}", deletedSteps, executionId);
         }
         
-        // Save retry execution
-        UUID retryExecutionId = executionRepository.save(retryExecution);
-        retryExecution.setId(retryExecutionId);
+        // Execute retry asynchronously using the same execution record
+        executeFlowAsync(execution, flowOpt.get());
         
-        // Execute retry asynchronously
-        executeFlowAsync(retryExecution, flowOpt.get());
-        
-        logger.info("Retry execution started: {} for original execution: {}", retryExecutionId, executionId);
-        return retryExecution;
+        logger.info("Retry execution started for execution: {} (correlation: {})", executionId, execution.getCorrelationId());
+        return execution;
     }
     
     /**
@@ -1211,12 +1214,14 @@ public class FlowExecutionService {
             int fileCount = 0;
             long totalBytes = 0L;
             
-            // Look for various file result patterns
+            // Look for various file result patterns across different step types
             Object foundFiles = stepResult.get("foundFiles");
             Object processedFiles = stepResult.get("processedFiles");
+            Object extractedFiles = stepResult.get("extractedFiles");
+            Object filesToProcess = stepResult.get("filesToProcess");
             Object totalBytesProcessed = stepResult.get("totalBytesProcessed");
             
-            // Count files from foundFiles
+            // Count files from foundFiles (sender adapters)
             if (foundFiles instanceof List) {
                 List<?> files = (List<?>) foundFiles;
                 fileCount += files.size();
@@ -1233,7 +1238,7 @@ public class FlowExecutionService {
                 }
             }
             
-            // Count files from processedFiles
+            // Count files from processedFiles (receiver adapters)
             if (processedFiles instanceof List) {
                 List<?> files = (List<?>) processedFiles;
                 fileCount += files.size();
@@ -1243,6 +1248,44 @@ public class FlowExecutionService {
                     if (file instanceof Map) {
                         Map<?, ?> fileMap = (Map<?, ?>) file;
                         Object size = fileMap.get("size");
+                        if (size instanceof Number) {
+                            totalBytes += ((Number) size).longValue();
+                        }
+                    }
+                }
+            }
+            
+            // Count files from extractedFiles (utility operations like ZIP_EXTRACT)
+            if (extractedFiles instanceof List) {
+                List<?> files = (List<?>) extractedFiles;
+                fileCount += files.size();
+                
+                // Sum bytes from file metadata if available
+                for (Object file : files) {
+                    if (file instanceof Map) {
+                        Map<?, ?> fileMap = (Map<?, ?>) file;
+                        Object size = fileMap.get("fileSize");
+                        if (size instanceof Number) {
+                            totalBytes += ((Number) size).longValue();
+                        }
+                    }
+                }
+            }
+            
+            // Count files from filesToProcess (end nodes, decision nodes)
+            if (filesToProcess instanceof List) {
+                List<?> files = (List<?>) filesToProcess;
+                fileCount += files.size();
+                
+                // Sum bytes from file metadata if available
+                for (Object file : files) {
+                    if (file instanceof Map) {
+                        Map<?, ?> fileMap = (Map<?, ?>) file;
+                        // Try different size field names
+                        Object size = fileMap.get("fileSize");
+                        if (size == null) {
+                            size = fileMap.get("size");
+                        }
                         if (size instanceof Number) {
                             totalBytes += ((Number) size).longValue();
                         }
@@ -1260,12 +1303,16 @@ public class FlowExecutionService {
             step.setBytesProcessed(totalBytes);
             
             if (fileCount > 0 || totalBytes > 0) {
-                logger.debug("Step {} file metrics: {} files, {} bytes", 
-                            step.getId(), fileCount, totalBytes);
+                logger.debug("Step {} ({}) file metrics: {} files, {} bytes", 
+                            step.getId(), step.getStepName(), fileCount, totalBytes);
+            } else {
+                logger.debug("Step {} ({}) has no file metrics", 
+                            step.getId(), step.getStepName());
             }
             
         } catch (Exception e) {
-            logger.warn("Failed to extract file metrics from step result: {}", e.getMessage());
+            logger.warn("Failed to extract file metrics from step result for step {}: {}", 
+                       step.getStepName(), e.getMessage());
         }
     }
     

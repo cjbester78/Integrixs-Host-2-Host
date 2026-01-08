@@ -4,56 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="ngrok-skip-browser-warning" content="true" />
     <title>Integrixs Host 2 Host</title>
-    <script>
-      // ngrok bypass - Check if we need to handle ngrok warning
-      if (window.location.hostname.includes('ngrok') || window.location.hostname.includes('ngrok-free.dev')) {
-        // If we're showing the ngrok warning page, redirect to bypass it
-        if (document.body && document.body.innerText && document.body.innerText.includes('You are about to visit')) {
-          // We're on the ngrok warning page, redirect with bypass
-          window.location.href = window.location.href + '?ngrok-skip-browser-warning=true';
-        }
-        
-        // Always add bypass parameter if not present
-        if (!window.location.search.includes('ngrok-skip-browser-warning')) {
-          const separator = window.location.search ? '&' : '?';
-          window.location.replace(window.location.href + separator + 'ngrok-skip-browser-warning=true');
-        }
-        
-        // Set custom User-Agent for future requests
-        Object.defineProperty(navigator, 'userAgent', {
-          get: function () { return 'H2H-FileTransfer-App/1.0'; },
-          configurable: true
-        });
-        
-        // Intercept all fetch requests
-        if (window.fetch) {
-          const originalFetch = window.fetch;
-          window.fetch = function(url, options = {}) {
-            if (!options.headers) options.headers = {};
-            options.headers['ngrok-skip-browser-warning'] = 'true';
-            options.headers['User-Agent'] = 'H2H-FileTransfer-App/1.0';
-            return originalFetch(url, options);
-          };
-        }
-        
-        // Intercept XMLHttpRequest
-        if (window.XMLHttpRequest) {
-          const originalOpen = XMLHttpRequest.prototype.open;
-          XMLHttpRequest.prototype.open = function(method, url, ...args) {
-            const result = originalOpen.apply(this, arguments);
-            try {
-              this.setRequestHeader('ngrok-skip-browser-warning', 'true');
-              this.setRequestHeader('User-Agent', 'H2H-FileTransfer-App/1.0');
-            } catch (e) {
-              // Headers may already be set, ignore
-            }
-            return result;
-          };
-        }
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>

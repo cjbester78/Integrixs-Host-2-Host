@@ -1,27 +1,31 @@
 package com.integrixs.backend.controller;
 
+import com.integrixs.backend.dto.ApiResponse;
+import com.integrixs.backend.dto.ExecutionValidationResult;
+import com.integrixs.backend.dto.request.AdminUserRequest;
+import com.integrixs.backend.dto.response.AdminUserResponse;
 import com.integrixs.backend.model.User;
+import com.integrixs.backend.service.AdministrativeRequestValidationService;
+import com.integrixs.backend.service.ResponseStandardizationService;
 import com.integrixs.backend.service.UserService;
+import com.integrixs.shared.util.SecurityContextHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * User management controller for CRUD operations
- * Provides endpoints for user administration
+ * User management controller for CRUD operations.
+ * Provides endpoints for user administration.
+ * Refactored following OOP principles with proper validation, DTOs, and error handling.
  */
 @RestController
 @RequestMapping("/api/users")
@@ -31,98 +35,144 @@ public class UserController {
 
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final AdministrativeRequestValidationService validationService;
+    private final ResponseStandardizationService responseService;
 
-    public UserController(UserService userService, PasswordEncoder passwordEncoder) {
+    @Autowired
+    public UserController(UserService userService, 
+                         PasswordEncoder passwordEncoder,
+                         AdministrativeRequestValidationService validationService,
+                         ResponseStandardizationService responseService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.validationService = validationService;
+        this.responseService = responseService;
+    }
+    
+    /**
+     * Get current user ID from security context.
+     */
+    private UUID getCurrentUserId() {
+        return SecurityContextHelper.getCurrentUserId();
     }
 
     /**
-     * Get all users (Admin only)
+     * Get all users (Admin only).
      */
     @GetMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> getAllUsers() {
+    public ResponseEntity<List<User>> getAllUsers() {
+        
+        UUID currentUserId = getCurrentUserId();
+        logger.info("User {} requesting all users", currentUserId);
+        
         try {
             List<User> users = userService.findAll();
+            logger.info("Retrieved {} users for admin: {}", users.size(), currentUserId);
+            return ResponseEntity.ok(users);
             
-            // Convert to safe DTOs (without passwords)
-            List<Map<String, Object>> userDTOs = users.stream()
-                    .map(this::convertToUserDTO)
-                    .toList();
-            
-            return ResponseEntity.ok(Map.of(
-                "users", userDTOs,
-                "total", userDTOs.size(),
-                "timestamp", LocalDateTime.now()
-            ));
-
         } catch (Exception e) {
-            logger.error("Error getting all users: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to retrieve users"));
+            logger.error("Failed to get all users for user: {}", currentUserId, e);
+            throw new RuntimeException("Failed to retrieve users", e);
         }
     }
 
     /**
-     * Get user by ID
+     * Get user by ID.
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or #id == authentication.principal.id.toString()")
-    public ResponseEntity<?> getUserById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> getUserById(@PathVariable String id) {
+        
+        UUID currentUserId = getCurrentUserId();
+        UUID userId;
+        
         try {
-            UUID userId = UUID.fromString(id);
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format");
+        }
+        
+        // Create immutable request DTO
+        AdminUserRequest userRequest = AdminUserRequest.builder()
+            .operation("get_user")
+            .userId(userId)
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserListRequest(
+            Map.of("userId", userId.toString())
+        );
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user details request: " + String.join(", ", validation.getErrors()));
+        }
+        
+        try {
             Optional<User> userOptional = userService.findById(userId);
             
             if (userOptional.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                throw new IllegalArgumentException("User not found with ID: " + userId);
             }
             
             User user = userOptional.get();
-            return ResponseEntity.ok(convertToUserDTO(user));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid user ID format"));
+            
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.detailsResponse(
+                user.getId(), user.getUsername(), user.getEmail(), 
+                user.getRole().toString(), user.isEnabled(), 
+                user.getCreatedAt(), user.getLastLogin()
+            );
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error getting user by ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to retrieve user"));
+            logger.error("Failed to get user by ID {} for user: {}", id, currentUserId, e);
+            throw new RuntimeException("Failed to retrieve user", e);
         }
     }
 
     /**
-     * Create new user (Admin only)
+     * Create new user (Admin only).
      */
     @PostMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> createUser(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> createUser(@RequestBody CreateUserRequest request) {
+        
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create immutable request DTO
+        AdminUserRequest createRequest = AdminUserRequest.createRequest(
+            request.getUsername(),
+            request.getEmail(),
+            request.getRole() != null ? request.getRole().toString() : "VIEWER",
+            request.getPassword(),
+            currentUserId
+        );
+        
+        // Create user for validation
+        User userData = new User(
+            request.getUsername(),
+            request.getEmail(),
+            request.getPassword(),
+            request.getFullName() != null ? request.getFullName() : request.getUsername(),
+            request.getRole() != null ? request.getRole() : User.UserRole.VIEWER
+        );
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserCreateRequest(userData);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user create request: " + String.join(", ", validation.getErrors()));
+        }
+        
         try {
-            // Validate request
-            if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Username is required"));
-            }
-            
-            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Email is required"));
-            }
-            
-            if (request.getPassword() == null || request.getPassword().length() < 8) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Password must be at least 8 characters long"));
-            }
-
             // Check if username or email already exists
             if (userService.existsByUsername(request.getUsername())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Username already exists"));
+                throw new IllegalArgumentException("Username already exists");
             }
             
             if (userService.existsByEmail(request.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Email already exists"));
+                throw new IllegalArgumentException("Email already exists");
             }
 
             // Create user
@@ -140,45 +190,77 @@ public class UserController {
 
             User savedUser = userService.saveUser(newUser);
             
-            logger.info("Created new user: {} by admin", savedUser.getUsername());
+            logger.info("Created new user: {} by admin: {}", savedUser.getUsername(), currentUserId);
             
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of(
-                        "message", "User created successfully",
-                        "user", convertToUserDTO(savedUser),
-                        "timestamp", LocalDateTime.now()
-                    ));
-
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.createdResponse(
+                savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole().toString()
+            );
+            
+            return responseService.created(response, "User created successfully");
+            
         } catch (Exception e) {
-            logger.error("Error creating user: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to create user"));
+            logger.error("Failed to create user for user: {}", currentUserId, e);
+            throw new RuntimeException("Failed to create user", e);
         }
     }
 
     /**
-     * Update user (Admin only or own profile)
+     * Update user (Admin only or own profile).
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or #id == authentication.principal.id.toString()")
-    public ResponseEntity<?> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
+        
+        UUID currentUserId = getCurrentUserId();
+        UUID userId;
+        
         try {
-            UUID userId = UUID.fromString(id);
-            Optional<User> userOptional = userService.findById(userId);
-            
-            if (userOptional.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            User user = userOptional.get();
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format");
+        }
+        
+        // Get existing user for validation
+        Optional<User> userOptional = userService.findById(userId);
+        if (userOptional.isEmpty()) {
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+        User existingUser = userOptional.get();
+        
+        // Create immutable request DTO
+        AdminUserRequest updateRequest = AdminUserRequest.builder()
+            .operation("update")
+            .userId(userId)
+            .email(request.getEmail())
+            .role(request.getRole() != null ? request.getRole().toString() : existingUser.getRole().toString())
+            .enabled(request.getEnabled())
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Create updated user for validation
+        User updatedUser = new User(
+            existingUser.getUsername(),
+            request.getEmail() != null ? request.getEmail() : existingUser.getEmail(),
+            existingUser.getPassword(),
+            request.getFullName() != null ? request.getFullName() : existingUser.getFullName(),
+            request.getRole() != null ? request.getRole() : existingUser.getRole()
+        );
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserUpdateRequest(userId.toString(), updatedUser);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user update request: " + String.join(", ", validation.getErrors()));
+        }
+        
+        try {
+            User user = existingUser;
+            User currentUser = userService.findById(currentUserId).orElseThrow();
             
             // Check permissions for role changes
             if (request.getRole() != null && !user.getRole().equals(request.getRole())) {
                 if (!currentUser.hasFullAccess()) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("error", "Only administrators can change user roles"));
+                    throw new IllegalArgumentException("Only administrators can change user roles");
                 }
                 user.setRole(request.getRole());
             }
@@ -190,8 +272,7 @@ public class UserController {
             
             if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
                 if (userService.existsByEmail(request.getEmail())) {
-                    return ResponseEntity.badRequest()
-                            .body(Map.of("error", "Email already exists"));
+                    throw new IllegalArgumentException("Email already exists");
                 }
                 user.setEmail(request.getEmail());
             }
@@ -207,144 +288,195 @@ public class UserController {
                 }
             }
 
-            User updatedUser = userService.saveUser(user);
+            User savedUser = userService.saveUser(user);
             
-            logger.info("Updated user: {} by {}", updatedUser.getUsername(), currentUser.getUsername());
+            logger.info("Updated user: {} by {}", savedUser.getUsername(), currentUser.getUsername());
             
-            return ResponseEntity.ok(Map.of(
-                "message", "User updated successfully",
-                "user", convertToUserDTO(updatedUser),
-                "timestamp", LocalDateTime.now()
-            ));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid user ID format"));
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.updatedResponse(
+                savedUser.getId(), "User updated successfully"
+            );
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error updating user {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to update user"));
+            logger.error("Failed to update user {} for user: {}", id, currentUserId, e);
+            throw new RuntimeException("Failed to update user", e);
         }
     }
 
     /**
-     * Delete user (Admin only)
+     * Delete user (Admin only).
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> deleteUser(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> deleteUser(@PathVariable String id) {
+        
+        UUID currentUserId = getCurrentUserId();
+        UUID userId;
+        
         try {
-            UUID userId = UUID.fromString(id);
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format");
+        }
+        
+        // Create immutable request DTO
+        AdminUserRequest deleteRequest = AdminUserRequest.deleteRequest(userId, "User deletion", currentUserId);
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserDeleteRequest(userId.toString());
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user delete request: " + String.join(", ", validation.getErrors()));
+        }
+        
+        try {
             Optional<User> userOptional = userService.findById(userId);
             
             if (userOptional.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                throw new IllegalArgumentException("User not found with ID: " + userId);
             }
             
             User user = userOptional.get();
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
             
             // Prevent self-deletion
-            if (userId.equals(currentUser.getId())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Cannot delete your own account"));
+            if (userId.equals(currentUserId)) {
+                throw new IllegalArgumentException("Cannot delete your own account");
             }
             
             userService.deleteUser(userId);
             
-            logger.info("Deleted user: {} by admin {}", user.getUsername(), currentUser.getUsername());
+            logger.info("Deleted user: {} by admin {}", user.getUsername(), currentUserId);
             
-            return ResponseEntity.ok(Map.of(
-                "message", "User deleted successfully",
-                "timestamp", LocalDateTime.now()
-            ));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid user ID format"));
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.deletedResponse(userId, user.getUsername());
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error deleting user {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to delete user"));
+            logger.error("Failed to delete user {} for user: {}", id, currentUserId, e);
+            throw new RuntimeException("Failed to delete user", e);
         }
     }
 
     /**
-     * Get user statistics (Admin only)
+     * Get user statistics (Admin only).
      */
     @GetMapping("/statistics")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> getUserStatistics() {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> getUserStatistics() {
+        
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create immutable request DTO
+        AdminUserRequest statsRequest = AdminUserRequest.builder()
+            .operation("user_statistics")
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserListRequest(Map.of());
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user statistics request: " + String.join(", ", validation.getErrors()));
+        }
+        
         try {
             Map<String, Long> stats = userService.getUserStatistics();
             
-            return ResponseEntity.ok(Map.of(
-                "statistics", stats,
-                "timestamp", LocalDateTime.now()
-            ));
-
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.builder()
+                .operation("user_statistics")
+                .status("SUCCESS")
+                .message("Retrieved user statistics")
+                .build();
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error getting user statistics: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to retrieve statistics"));
+            logger.error("Failed to get user statistics for user: {}", currentUserId, e);
+            throw new RuntimeException("Failed to retrieve statistics", e);
         }
     }
 
     /**
-     * Search users (Admin only)
+     * Search users (Admin only).
      */
     @GetMapping("/search")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> searchUsers(@RequestParam String query) {
+    public ResponseEntity<ApiResponse<List<User>>> searchUsers(@RequestParam String query) {
+        
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create immutable request DTO
+        AdminUserRequest searchRequest = AdminUserRequest.builder()
+            .operation("search_users")
+            .username(query)
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserListRequest(
+            Map.of("query", query != null ? query : "")
+        );
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user search request: " + String.join(", ", validation.getErrors()));
+        }
+        
         try {
             List<User> users = userService.searchUsers(query);
             
-            List<Map<String, Object>> userDTOs = users.stream()
-                    .map(this::convertToUserDTO)
-                    .toList();
+            logger.info("Found {} users matching query '{}' for admin: {}", users.size(), query, currentUserId);
             
-            return ResponseEntity.ok(Map.of(
-                "users", userDTOs,
-                "total", userDTOs.size(),
-                "query", query,
-                "timestamp", LocalDateTime.now()
-            ));
-
+            return ResponseEntity.ok(ApiResponse.success("Found " + users.size() + " users matching query: " + query, users));
+            
         } catch (Exception e) {
-            logger.error("Error searching users: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to search users"));
+            logger.error("Failed to search users with query '{}' for user: {}", query, currentUserId, e);
+            throw new RuntimeException("Failed to search users", e);
         }
     }
 
     /**
-     * Lock/unlock user account (Admin only)
+     * Lock/unlock user account (Admin only).
      */
     @PostMapping("/{id}/lock")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<?> toggleUserLock(@PathVariable String id, @RequestBody Map<String, Boolean> request) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> toggleUserLock(@PathVariable String id, @RequestBody Map<String, Boolean> request) {
+        
+        UUID currentUserId = getCurrentUserId();
+        UUID userId;
+        
         try {
-            UUID userId = UUID.fromString(id);
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format");
+        }
+        
+        Boolean lock = request.get("lock");
+        if (lock == null) {
+            throw new IllegalArgumentException("Lock status is required");
+        }
+        
+        // Create immutable request DTO
+        AdminUserRequest lockRequest = AdminUserRequest.statusChangeRequest(userId, !lock, currentUserId);
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserListRequest(
+            Map.of("userId", userId.toString(), "lock", lock.toString())
+        );
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user lock request: " + String.join(", ", validation.getErrors()));
+        }
+        
+        try {
             Optional<User> userOptional = userService.findById(userId);
             
             if (userOptional.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                throw new IllegalArgumentException("User not found with ID: " + userId);
             }
-            
-            Boolean lock = request.get("lock");
-            if (lock == null) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Lock status is required"));
-            }
-            
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
             
             // Prevent self-locking
-            if (userId.equals(currentUser.getId())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Cannot lock/unlock your own account"));
+            if (userId.equals(currentUserId)) {
+                throw new IllegalArgumentException("Cannot lock/unlock your own account");
             }
             
             if (lock) {
@@ -356,73 +488,106 @@ public class UserController {
             User user = userService.findById(userId).get();
             String action = lock ? "locked" : "unlocked";
             
-            logger.info("User account {} {} by admin {}", user.getUsername(), action, currentUser.getUsername());
+            logger.info("User account {} {} by admin {}", user.getUsername(), action, currentUserId);
             
-            return ResponseEntity.ok(Map.of(
-                "message", "User account " + action + " successfully",
-                "user", convertToUserDTO(user),
-                "timestamp", LocalDateTime.now()
-            ));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid user ID format"));
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.statusChangeResponse(
+                user.getId(), user.getUsername(), user.isAccountNonLocked()
+            );
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error toggling user lock {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to update user lock status"));
+            logger.error("Failed to toggle user lock {} for user: {}", id, currentUserId, e);
+            throw new RuntimeException("Failed to update user lock status", e);
         }
     }
 
     /**
-     * Get current user profile
+     * Get current user profile.
      */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser() {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> getCurrentUser() {
+        
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create immutable request DTO
+        AdminUserRequest profileRequest = AdminUserRequest.builder()
+            .operation("get_profile")
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Validate request
+        ExecutionValidationResult validation = validationService.validateUserListRequest(Map.of());
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid user profile request: " + String.join(", ", validation.getErrors()));
+        }
+        
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
+            User currentUser = userService.findById(currentUserId).orElseThrow(
+                () -> new IllegalArgumentException("Current user not found")
+            );
             
-            return ResponseEntity.ok(Map.of(
-                "user", convertToUserDTO(currentUser),
-                "timestamp", LocalDateTime.now()
-            ));
-
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.detailsResponse(
+                currentUser.getId(), currentUser.getUsername(), currentUser.getEmail(),
+                currentUser.getRole().toString(), currentUser.isEnabled(),
+                currentUser.getCreatedAt(), currentUser.getLastLogin()
+            );
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error getting current user profile: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to retrieve user profile"));
+            logger.error("Failed to get current user profile for user: {}", currentUserId, e);
+            throw new RuntimeException("Failed to retrieve user profile", e);
         }
     }
 
     /**
-     * Change user password
+     * Change user password.
      */
     @PutMapping("/{id}/password")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or #id == authentication.principal.id.toString()")
-    public ResponseEntity<?> changePassword(@PathVariable String id, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<ApiResponse<AdminUserResponse>> changePassword(@PathVariable String id, @RequestBody ChangePasswordRequest request) {
+        
+        UUID currentUserId = getCurrentUserId();
+        UUID userId;
+        
         try {
-            UUID userId = UUID.fromString(id);
+            userId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format");
+        }
+        
+        // Create immutable request DTO using password reset (closest available method)
+        AdminUserRequest passwordRequest = AdminUserRequest.passwordResetRequest(
+            userId, request.getNewPassword(), currentUserId
+        );
+        
+        // Validate request using general user list validation
+        ExecutionValidationResult validation = validationService.validateUserListRequest(
+            Map.of(
+                "userId", userId.toString(),
+                "newPassword", request.getNewPassword() != null ? request.getNewPassword() : ""
+            )
+        );
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Invalid password change request: " + String.join(", ", validation.getErrors()));
+        }
+        
+        try {
             Optional<User> userOptional = userService.findById(userId);
             
             if (userOptional.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                throw new IllegalArgumentException("User not found with ID: " + userId);
             }
             
             User user = userOptional.get();
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            User currentUser = (User) auth.getPrincipal();
+            User currentUser = userService.findById(currentUserId).orElseThrow();
             
             // For non-admin users, verify current password
             if (!currentUser.hasFullAccess() && !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Current password is incorrect"));
-            }
-            
-            // Validate new password
-            if (request.getNewPassword() == null || request.getNewPassword().length() < 8) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "New password must be at least 8 characters long"));
+                throw new IllegalArgumentException("Current password is incorrect");
             }
             
             // Update password
@@ -431,41 +596,19 @@ public class UserController {
             
             logger.info("Password changed for user: {} by {}", user.getUsername(), currentUser.getUsername());
             
-            return ResponseEntity.ok(Map.of(
-                "message", "Password changed successfully",
-                "timestamp", LocalDateTime.now()
-            ));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Invalid user ID format"));
+            // Create response using builder pattern
+            AdminUserResponse response = AdminUserResponse.passwordResetResponse(
+                user.getId(), user.getUsername()
+            );
+            
+            return responseService.success(response);
+            
         } catch (Exception e) {
-            logger.error("Error changing password for user {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to change password"));
+            logger.error("Failed to change password for user {} for user: {}", id, currentUserId, e);
+            throw new RuntimeException("Failed to change password", e);
         }
     }
 
-    /**
-     * Convert User to safe DTO (without password)
-     */
-    private Map<String, Object> convertToUserDTO(User user) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("id", user.getId());
-        dto.put("username", user.getUsername());
-        dto.put("email", user.getEmail());
-        dto.put("fullName", user.getFullName());
-        dto.put("role", user.getRole());
-        dto.put("enabled", user.isEnabled());
-        dto.put("accountNonLocked", user.isAccountNonLocked());
-        dto.put("accountNonExpired", user.isAccountNonExpired());
-        dto.put("credentialsNonExpired", user.isCredentialsNonExpired());
-        dto.put("timezone", user.getTimezone());
-        dto.put("createdAt", user.getCreatedAt());
-        dto.put("updatedAt", user.getUpdatedAt());
-        dto.put("lastLogin", user.getLastLogin());
-        return dto;
-    }
 
     // DTOs
     public static class CreateUserRequest {

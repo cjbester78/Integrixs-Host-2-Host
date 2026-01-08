@@ -1,6 +1,7 @@
 package com.integrixs.shared.model;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -69,7 +70,9 @@ public class PgpKey {
         this.canAuthenticate = false;
         this.exportedCount = 0;
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt and updatedBy should be NULL on creation - only set on actual updates
+        this.updatedAt = null;
+        this.updatedBy = null;
     }
     
     // Constructor for new key generation
@@ -80,6 +83,15 @@ public class PgpKey {
         this.keyType = keyType;
         this.keySize = keySize;
         // ID will be assigned by the repository during save
+    }
+    
+    /**
+     * Mark entity as updated by specified user. Should be called for all business logic updates.
+     * This properly maintains the audit trail for UPDATE operations.
+     */
+    public void markAsUpdated(UUID updatedBy) {
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = Objects.requireNonNull(updatedBy, "Updated by cannot be null");
     }
     
     // Utility methods
@@ -301,6 +313,10 @@ public class PgpKey {
         return createdAt;
     }
     
+    /**
+     * Sets the creation timestamp. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -309,6 +325,10 @@ public class PgpKey {
         return updatedAt;
     }
     
+    /**
+     * Sets the update timestamp. Should only be used during UPDATE operations by persistence layer.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
@@ -317,6 +337,10 @@ public class PgpKey {
         return createdBy;
     }
     
+    /**
+     * Sets the user who created this entity. Should only be used during INSERT operations.
+     * Protected visibility to prevent misuse in business logic.
+     */
     public void setCreatedBy(UUID createdBy) {
         this.createdBy = createdBy;
     }
@@ -327,5 +351,6 @@ public class PgpKey {
     
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
     }
 }

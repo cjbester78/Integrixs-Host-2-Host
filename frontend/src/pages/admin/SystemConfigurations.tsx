@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNotifications } from '@/stores/ui'
 import { configApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import EnvironmentConfiguration from '@/components/admin/EnvironmentConfiguration'
 
 interface SystemConfiguration {
   id: string
@@ -269,6 +270,9 @@ const SystemConfigurations: React.FC = () => {
           <span className="text-sm text-muted-foreground">{configurations.length} configurations</span>
         </div>
       </div>
+
+      {/* Environment Configuration */}
+      <EnvironmentConfiguration />
 
       {/* Filters */}
       <Card className="app-card border">

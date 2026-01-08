@@ -5,14 +5,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /**
  * Utility class for audit-related operations across the application
  * Provides centralized methods for getting current user information for audit trails
  */
+@Component
 public class AuditUtils {
     
     private static final Logger logger = LoggerFactory.getLogger(AuditUtils.class);
+    
+    private static JdbcTemplate jdbcTemplate;
+    
+    @Autowired
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+        AuditUtils.jdbcTemplate = jdbcTemplate;
+    }
     
     /**
      * Get current logged-in user ID for audit fields (created_by, updated_by)
@@ -38,10 +51,14 @@ public class AuditUtils {
                     }
                 }
             }
-            return "system"; // fallback for system operations like initialization
+            // fallback for system operations - return configured system integration user ID
+            String systemUserId = getSystemUserId();
+            return systemUserId != null ? systemUserId : "system";
         } catch (Exception e) {
             logger.warn("Unable to get current user ID for audit: {}", e.getMessage());
-            return "system";
+            // fallback for system operations - return configured system integration user ID
+            String systemUserId = getSystemUserId();
+            return systemUserId != null ? systemUserId : "system";
         }
     }
     
@@ -80,5 +97,30 @@ public class AuditUtils {
             logger.warn("Unable to get current username for audit: {}", e.getMessage());
             return "system";
         }
+    }
+    
+    /**
+     * Get system user ID for automated operations
+     * Returns the configured system integration user ID from system configuration
+     * 
+     * @return System integration user UUID as string, or null if not found
+     */
+    public static String getSystemUserId() {
+        try {
+            if (jdbcTemplate != null) {
+                // Get the configured system integration username from system configuration
+                String getConfigSql = "SELECT config_value FROM system_configuration WHERE config_key = 'system.integration.username'";
+                String systemUsername = jdbcTemplate.queryForObject(getConfigSql, String.class);
+                
+                if (systemUsername != null) {
+                    // Get the user ID for the configured system integration user
+                    String getUserSql = "SELECT id FROM users WHERE username = ? LIMIT 1";
+                    return jdbcTemplate.queryForObject(getUserSql, String.class, systemUsername);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to get system integration user ID from configuration: {}", e.getMessage());
+        }
+        return null;
     }
 }

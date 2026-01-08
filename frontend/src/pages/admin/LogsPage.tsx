@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { FileText, Database, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePermissions } from '@/hooks/auth'
 
 // Import existing log components
 import SystemLogs from './SystemLogs'
@@ -8,23 +9,32 @@ import TransactionalLogs from './TransactionalLogs'
 
 type LogTab = 'system' | 'transactional'
 
-const logTabs: { id: LogTab; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
+const logTabs: { id: LogTab; label: string; icon: React.ComponentType<{ className?: string }>; description: string; adminOnly?: boolean }[] = [
   {
     id: 'system',
     label: 'System Logs',
     icon: Activity,
-    description: 'Application logs, errors, and system events'
+    description: 'Application logs, errors, and system events',
+    adminOnly: true
   },
   {
     id: 'transactional',
     label: 'Transactional Logs',
     icon: Database,
     description: 'Transaction audit trails and business process logs'
+    // No adminOnly - available to viewers
   }
 ]
 
 const LogsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<LogTab>('system')
+  const { isAdmin } = usePermissions()
+  
+  // Filter tabs based on user role
+  const availableTabs = logTabs.filter(tab => !tab.adminOnly || isAdmin())
+  
+  // Set default tab based on role
+  const defaultTab: LogTab = isAdmin() ? 'system' : 'transactional'
+  const [activeTab, setActiveTab] = useState<LogTab>(defaultTab)
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -50,10 +60,11 @@ const LogsPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="mb-8">
-        <div className="flex space-x-4 border-b border-border">
-          {logTabs.map((tab) => {
+      {/* Tab Navigation - only show if there are multiple tabs */}
+      {availableTabs.length > 1 && (
+        <div className="mb-8">
+          <div className="flex space-x-4 border-b border-border">
+            {availableTabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
             
@@ -73,13 +84,14 @@ const LogsPage: React.FC = () => {
               </button>
             )
           })}
+          </div>
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground">
+              {availableTabs.find(tab => tab.id === activeTab)?.description}
+            </p>
+          </div>
         </div>
-        <div className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            {logTabs.find(tab => tab.id === activeTab)?.description}
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* Tab Content */}
       <div className="transition-all duration-300">

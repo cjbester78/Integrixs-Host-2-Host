@@ -11,6 +11,8 @@ import com.integrixs.shared.model.SshKey;
 import com.integrixs.shared.model.FlowExecutionStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,7 @@ public class AdapterExecutionService {
     
     private static final Logger logger = LoggerFactory.getLogger(AdapterExecutionService.class);
     private final EnhancedLogger enhancedLogger = EnhancedLogger.getLogger(AdapterExecutionService.class);
+    private static final Marker ADAPTER_EXECUTION_MARKER = MarkerFactory.getMarker("ADAPTER_EXECUTION");
     
     private final AdapterRepository adapterRepository;
     private final SystemConfigurationRepository configRepository;
@@ -60,7 +63,7 @@ public class AdapterExecutionService {
      */
     public Map<String, Object> executeAdapter(UUID adapterId, Map<String, Object> executionContext, 
                                              FlowExecutionStep step) {
-        logger.info("Executing adapter: {} for step: {}", adapterId, step != null ? step.getId() : "polling");
+        logger.info(ADAPTER_EXECUTION_MARKER, "Executing adapter: {} for step: {}", adapterId, step != null ? step.getId() : "polling");
         
         Optional<Adapter> adapterOpt = adapterRepository.findById(adapterId);
         if (adapterOpt.isEmpty()) {
@@ -96,7 +99,7 @@ public class AdapterExecutionService {
             // Use factory pattern to get appropriate adapter executor
             try {
                 AdapterExecutor executor = AdapterFactory.createExecutor(adapter);
-                logger.info("Using {} adapter executor for {}", 
+                logger.info(ADAPTER_EXECUTION_MARKER, "Using {} adapter executor for {}", 
                            executor.getClass().getSimpleName(), adapter.getName());
                 
                 // Execute using the specific adapter executor
@@ -117,7 +120,7 @@ public class AdapterExecutionService {
             result.put("executionEndTime", LocalDateTime.now());
             result.put("executionStatus", "SUCCESS");
             
-            logger.info("Adapter execution completed successfully: {}", adapterId);
+            logger.info(ADAPTER_EXECUTION_MARKER, "Adapter execution completed successfully: {}", adapterId);
             return result;
             
         } catch (Exception e) {

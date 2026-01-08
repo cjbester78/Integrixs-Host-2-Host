@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Define timestamp for startup-based timestamped files -->
+    <timestamp key="byDate" datePattern="yyyy-MM-dd"/>
+    
+    <!-- Define properties -->
+    <property name="LOG_PATH" value="${logging.file.path:-logs}" />
     
     <!-- =================================================================== -->
     <!-- H2H Two-Tier Logging Configuration                                 -->
@@ -17,34 +22,21 @@
     </appender>
     
     <!-- APPLICATION logs - Infrastructure, startup, configuration, debug -->
-    <appender name="APPLICATION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/application.log</file>
-        <filter class="com.integrixs.backend.logging.ApplicationLogFilter"/>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/application.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>3GB</totalSizeCap>
-        </rollingPolicy>
+    <appender name="APPLICATION_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/application-${byDate}.log</file>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
     
     <!-- Error file appender for application errors -->
-    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/h2h-backend-error.log</file>
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/h2h-backend-error-${byDate}.log</file>
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
             <onMatch>ACCEPT</onMatch>
             <onMismatch>DENY</onMismatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/h2h-backend-error.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>50MB</maxFileSize>
-            <maxHistory>60</maxHistory>
-            <totalSizeCap>2GB</totalSizeCap>
-        </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId:-}] [%X{userId:-}] %logger{36} - %msg%n%ex</pattern>
         </encoder>
@@ -53,15 +45,8 @@
     <!-- TIER 2: TRANSACTIONAL LOGS - Files + Database -->
     
     <!-- TRANSACTIONAL logs - Authentication, file processing, adapter execution -->
-    <appender name="TRANSACTION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/transactions.log</file>
-        <filter class="com.integrixs.backend.logging.TransactionalLogFilter"/>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/transactions.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>
-            <maxHistory>90</maxHistory>
-            <totalSizeCap>5GB</totalSizeCap>
-        </rollingPolicy>
+    <appender name="TRANSACTION_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/transactions-${byDate}.log</file>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{correlationId:-}] [%X{username:-}] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
@@ -69,14 +54,13 @@
     
     <!-- TRANSACTIONAL database appender - Stores business events in transaction_logs table -->
     <appender name="TRANSACTION_DB" class="com.integrixs.backend.logging.TransactionLogAppender">
-        <filter class="com.integrixs.backend.logging.TransactionalLogFilter"/>
     </appender>
     
     <!-- Legacy appenders for backward compatibility -->
     
     <!-- Adapter execution file appender -->
-    <appender name="ADAPTER_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/h2h-adapter-execution.log</file>
+    <appender name="ADAPTER_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/h2h-adapter-execution-${byDate}.log</file>
         <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
             <evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
                 <marker>ADAPTER_EXECUTION</marker>
@@ -84,20 +68,14 @@
             <onMismatch>DENY</onMismatch>
             <onMatch>ACCEPT</onMatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/h2h-adapter-execution.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>3GB</totalSizeCap>
-        </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId:-}] [%X{adapterId:-}] [%X{adapterName:-}] [%X{executionId:-}] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
     
     <!-- Flow execution file appender -->
-    <appender name="FLOW_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/h2h-flow-execution.log</file>
+    <appender name="FLOW_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/h2h-flow-execution-${byDate}.log</file>
         <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
             <evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
                 <marker>FLOW_EXECUTION</marker>
@@ -105,29 +83,17 @@
             <onMismatch>DENY</onMismatch>
             <onMatch>ACCEPT</onMatch>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/h2h-flow-execution.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>3GB</totalSizeCap>
-        </rollingPolicy>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
             <layout class="com.integrixs.backend.logging.BusinessFriendlyLayout"/>
         </encoder>
     </appender>
     
     <!-- Business-friendly flow logging appender -->
-    <appender name="BUSINESS_FLOW_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-logs}/h2h-business-flow.log</file>
+    <appender name="BUSINESS_FLOW_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_PATH}/h2h-business-flow-${byDate}.log</file>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>INFO</level>
         </filter>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH:-logs}/backup/h2h-business-flow.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>3GB</totalSizeCap>
-        </rollingPolicy>
         <encoder>
             <pattern>%msg%n</pattern>
         </encoder>

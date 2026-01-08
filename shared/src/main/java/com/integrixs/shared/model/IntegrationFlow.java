@@ -1,12 +1,18 @@
 package com.integrixs.shared.model;
 
+import com.integrixs.shared.model.value.ExecutionMetrics;
+import com.integrixs.shared.model.value.FlowConfiguration;
+import com.integrixs.shared.model.value.ScheduleSettings;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * IntegrationFlow entity representing visual flow definitions
- * Links adapters and utilities in configurable workflows
+ * IntegrationFlow entity representing visual flow definitions.
+ * Links adapters and utilities in configurable workflows.
+ * Enhanced with proper encapsulation and immutable value objects following OOP principles.
  */
 public class IntegrationFlow {
     
@@ -15,29 +21,16 @@ public class IntegrationFlow {
     private String description;
     private String bankName;
     
-    // Flow definition and metadata
-    private Map<String, Object> flowDefinition; // JSON structure with nodes and connections
+    // Enhanced with value objects for better encapsulation
+    private FlowConfiguration configuration;
+    private ExecutionMetrics executionMetrics;
     private Integer flowVersion;
-    private String flowType; // STANDARD, PARALLEL, CONDITIONAL
-    
-    // Execution settings
-    private Integer maxParallelExecutions;
-    private Integer timeoutMinutes;
-    private Map<String, Object> retryPolicy; // JSON retry configuration
-    
-    // Performance tracking
-    private Long totalExecutions;
-    private Long successfulExecutions;
-    private Long failedExecutions;
-    private Long averageExecutionTimeMs;
-    
-    // Scheduling
-    private Boolean scheduleEnabled;
-    private String scheduleCron;
-    private LocalDateTime nextScheduledRun;
     
     // Status and control
     private Boolean active;
+    
+    // Import tracking
+    private UUID originalFlowId;  // ID of the original flow when imported
     
     // Audit fields
     private LocalDateTime createdAt;
@@ -67,116 +60,103 @@ public class IntegrationFlow {
     // Constructors
     public IntegrationFlow() {
         this.flowVersion = 1;
-        this.flowType = FlowType.STANDARD.name();
-        this.maxParallelExecutions = 1;
-        this.timeoutMinutes = 60;
-        this.totalExecutions = 0L;
-        this.successfulExecutions = 0L;
-        this.failedExecutions = 0L;
-        this.averageExecutionTimeMs = 0L;
-        this.scheduleEnabled = false;
+        this.configuration = FlowConfiguration.defaultConfiguration();
+        this.executionMetrics = ExecutionMetrics.empty();
         this.active = true;
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt and updatedBy should be NULL on creation - only set on actual updates
+        this.updatedAt = null;
+        this.updatedBy = null;
     }
     
     public IntegrationFlow(String name, String description, Map<String, Object> flowDefinition, UUID createdBy) {
         this();
-        this.name = name;
+        this.name = validateName(name);
         this.description = description;
-        this.flowDefinition = flowDefinition;
-        this.createdBy = createdBy;
-        this.updatedBy = createdBy;
+        this.configuration = FlowConfiguration.builder()
+            .flowDefinition(flowDefinition)
+            .build();
+        this.createdBy = Objects.requireNonNull(createdBy, "Created by cannot be null");
+        // Do not set updatedBy on creation - only set on actual updates
     }
     
     public IntegrationFlow(String name, String description, String bankName, Map<String, Object> flowDefinition, UUID createdBy) {
-        this();
-        this.name = name;
-        this.description = description;
+        this(name, description, flowDefinition, createdBy);
         this.bankName = bankName;
-        this.flowDefinition = flowDefinition;
-        this.createdBy = createdBy;
-        this.updatedBy = createdBy;
     }
     
-    // Business logic methods
+    /**
+     * Validate flow name.
+     */
+    private String validateName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Flow name cannot be null or empty");
+        }
+        if (name.length() > 100) {
+            throw new IllegalArgumentException("Flow name cannot exceed 100 characters");
+        }
+        return name.trim();
+    }
+    
+    // Business logic methods using value objects
     public boolean isScheduled() {
-        return scheduleEnabled != null && scheduleEnabled && scheduleCron != null;
+        return configuration != null && configuration.isScheduled();
     }
     
     public boolean isReadyForExecution() {
-        return active != null && active && flowDefinition != null;
+        return isActive() && configuration != null && configuration.isReadyForExecution();
     }
     
     public boolean supportsParallelExecution() {
-        return maxParallelExecutions != null && maxParallelExecutions > 1;
+        return configuration != null && configuration.supportsParallelExecution();
     }
     
     public double getSuccessRate() {
-        if (totalExecutions == null || totalExecutions == 0) {
-            return 100.0;
-        }
-        return (double) (successfulExecutions != null ? successfulExecutions : 0) / totalExecutions * 100.0;
+        return executionMetrics != null ? executionMetrics.getSuccessRate() : 100.0;
     }
     
     public double getFailureRate() {
-        return 100.0 - getSuccessRate();
+        return executionMetrics != null ? executionMetrics.getFailureRate() : 0.0;
     }
     
     public String getFormattedAverageExecutionTime() {
-        if (averageExecutionTimeMs == null || averageExecutionTimeMs == 0) {
-            return "0ms";
-        }
-        
-        if (averageExecutionTimeMs < 1000) {
-            return averageExecutionTimeMs + "ms";
-        } else if (averageExecutionTimeMs < 60000) {
-            return String.format("%.1fs", averageExecutionTimeMs / 1000.0);
-        } else {
-            long minutes = averageExecutionTimeMs / 60000;
-            long seconds = (averageExecutionTimeMs % 60000) / 1000;
-            return String.format("%dm %ds", minutes, seconds);
-        }
+        return executionMetrics != null ? executionMetrics.getFormattedAverageExecutionTime() : "0ms";
     }
     
     public void incrementVersion() {
         this.flowVersion = (this.flowVersion != null ? this.flowVersion : 0) + 1;
-        this.updatedAt = LocalDateTime.now();
     }
     
     public void recordExecution(long executionTimeMs, boolean successful) {
-        this.totalExecutions = (this.totalExecutions != null ? this.totalExecutions : 0) + 1;
-        
-        if (successful) {
-            this.successfulExecutions = (this.successfulExecutions != null ? this.successfulExecutions : 0) + 1;
-        } else {
-            this.failedExecutions = (this.failedExecutions != null ? this.failedExecutions : 0) + 1;
+        if (this.executionMetrics == null) {
+            this.executionMetrics = ExecutionMetrics.empty();
         }
-        
-        // Update average execution time using weighted average
-        if (this.averageExecutionTimeMs == null || this.averageExecutionTimeMs == 0) {
-            this.averageExecutionTimeMs = executionTimeMs;
-        } else {
-            // 80% previous average + 20% current execution
-            this.averageExecutionTimeMs = (long) (this.averageExecutionTimeMs * 0.8 + executionTimeMs * 0.2);
-        }
-        
-        this.updatedAt = LocalDateTime.now();
+        this.executionMetrics = this.executionMetrics.recordExecution(executionTimeMs, successful);
     }
     
     public void updateNextScheduledRun() {
-        if (isScheduled()) {
-            // In a real implementation, this would calculate the next run based on the cron expression
-            // For now, just set it to next hour as placeholder
-            this.nextScheduledRun = LocalDateTime.now().plusHours(1);
-        } else {
-            this.nextScheduledRun = null;
+        if (configuration != null && configuration.isScheduled()) {
+            ScheduleSettings schedule = configuration.getScheduleSettings();
+            // Update schedule with next run time (placeholder implementation)
+            ScheduleSettings updatedSchedule = schedule.withNextRun(LocalDateTime.now().plusHours(1));
+            this.configuration = configuration.withScheduleSettings(updatedSchedule);
         }
     }
     
     public boolean isOverdue() {
-        return isScheduled() && nextScheduledRun != null && nextScheduledRun.isBefore(LocalDateTime.now());
+        return configuration != null && 
+               configuration.getScheduleSettings().isOverdue();
     }
+    
+    /**
+     * Mark entity as updated by specified user. Should be called for all business logic updates.
+     * This properly maintains the audit trail for UPDATE operations.
+     */
+    public void markAsUpdated(UUID updatedBy) {
+        this.updatedAt = LocalDateTime.now();
+        this.updatedBy = Objects.requireNonNull(updatedBy, "Updated by cannot be null");
+    }
+    
     
     public String getDisplayName() {
         return String.format("%s (v%d)", name, flowVersion);
@@ -225,13 +205,17 @@ public class IntegrationFlow {
         this.bankName = bankName;
     }
     
+    // Enhanced getters using value objects with defensive copying
     public Map<String, Object> getFlowDefinition() {
-        return flowDefinition;
+        return configuration != null ? configuration.getFlowDefinition() : Collections.emptyMap();
     }
     
     public void setFlowDefinition(Map<String, Object> flowDefinition) {
-        this.flowDefinition = flowDefinition;
-        this.updatedAt = LocalDateTime.now();
+        if (this.configuration == null) {
+            this.configuration = FlowConfiguration.builder().flowDefinition(flowDefinition).build();
+        } else {
+            this.configuration = FlowConfiguration.builder().from(configuration).flowDefinition(flowDefinition).build();
+        }
     }
     
     public Integer getFlowVersion() {
@@ -243,95 +227,172 @@ public class IntegrationFlow {
     }
     
     public String getFlowType() {
-        return flowType;
+        return configuration != null ? configuration.getFlowType().name() : FlowConfiguration.FlowType.STANDARD.name();
     }
     
     public void setFlowType(String flowType) {
-        this.flowType = flowType;
+        FlowConfiguration.FlowType type;
+        try {
+            type = FlowConfiguration.FlowType.valueOf(flowType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            type = FlowConfiguration.FlowType.STANDARD;
+        }
+        
+        if (this.configuration == null) {
+            this.configuration = FlowConfiguration.builder().flowType(type).build();
+        } else {
+            this.configuration = this.configuration.withFlowType(type);
+        }
     }
     
     public Integer getMaxParallelExecutions() {
-        return maxParallelExecutions;
+        return configuration != null ? configuration.getMaxParallelExecutions() : 1;
     }
     
     public void setMaxParallelExecutions(Integer maxParallelExecutions) {
-        this.maxParallelExecutions = maxParallelExecutions;
+        if (maxParallelExecutions != null && maxParallelExecutions > 0) {
+            if (this.configuration == null) {
+                this.configuration = FlowConfiguration.builder().maxParallelExecutions(maxParallelExecutions).build();
+            } else {
+                this.configuration = this.configuration.withMaxParallelExecutions(maxParallelExecutions);
+            }
+            }
     }
     
     public Integer getTimeoutMinutes() {
-        return timeoutMinutes;
+        return configuration != null ? configuration.getTimeoutMinutes() : 60;
     }
     
     public void setTimeoutMinutes(Integer timeoutMinutes) {
-        this.timeoutMinutes = timeoutMinutes;
+        if (timeoutMinutes != null && timeoutMinutes > 0) {
+            if (this.configuration == null) {
+                this.configuration = FlowConfiguration.builder().timeoutMinutes(timeoutMinutes).build();
+            } else {
+                this.configuration = this.configuration.withTimeout(timeoutMinutes);
+            }
+            }
     }
     
     public Map<String, Object> getRetryPolicy() {
-        return retryPolicy;
+        return configuration != null ? configuration.getRetryPolicy() : Collections.emptyMap();
     }
     
     public void setRetryPolicy(Map<String, Object> retryPolicy) {
-        this.retryPolicy = retryPolicy;
+        if (this.configuration == null) {
+            this.configuration = FlowConfiguration.builder().retryPolicy(retryPolicy).build();
+        } else {
+            this.configuration = FlowConfiguration.builder().from(configuration).retryPolicy(retryPolicy).build();
+        }
     }
     
     public Long getTotalExecutions() {
-        return totalExecutions;
+        return executionMetrics != null ? executionMetrics.getTotalExecutions() : 0L;
     }
     
     public void setTotalExecutions(Long totalExecutions) {
-        this.totalExecutions = totalExecutions;
+        // Setting individual metrics should update the value object
+        if (executionMetrics == null) {
+            executionMetrics = ExecutionMetrics.empty();
+        }
+        // This is for legacy compatibility - create new metrics with updated total
+        this.executionMetrics = ExecutionMetrics.builder()
+            .totalExecutions(totalExecutions != null ? totalExecutions : 0L)
+            .successfulExecutions(executionMetrics.getSuccessfulExecutions())
+            .failedExecutions(executionMetrics.getFailedExecutions())
+            .averageExecutionTimeMs(executionMetrics.getAverageExecutionTimeMs())
+            .build();
     }
     
     public Long getSuccessfulExecutions() {
-        return successfulExecutions;
+        return executionMetrics != null ? executionMetrics.getSuccessfulExecutions() : 0L;
     }
     
     public void setSuccessfulExecutions(Long successfulExecutions) {
-        this.successfulExecutions = successfulExecutions;
+        if (executionMetrics == null) {
+            executionMetrics = ExecutionMetrics.empty();
+        }
+        this.executionMetrics = ExecutionMetrics.builder()
+            .totalExecutions(executionMetrics.getTotalExecutions())
+            .successfulExecutions(successfulExecutions != null ? successfulExecutions : 0L)
+            .failedExecutions(executionMetrics.getFailedExecutions())
+            .averageExecutionTimeMs(executionMetrics.getAverageExecutionTimeMs())
+            .build();
     }
     
     public Long getFailedExecutions() {
-        return failedExecutions;
+        return executionMetrics != null ? executionMetrics.getFailedExecutions() : 0L;
     }
     
     public void setFailedExecutions(Long failedExecutions) {
-        this.failedExecutions = failedExecutions;
+        if (executionMetrics == null) {
+            executionMetrics = ExecutionMetrics.empty();
+        }
+        this.executionMetrics = ExecutionMetrics.builder()
+            .totalExecutions(executionMetrics.getTotalExecutions())
+            .successfulExecutions(executionMetrics.getSuccessfulExecutions())
+            .failedExecutions(failedExecutions != null ? failedExecutions : 0L)
+            .averageExecutionTimeMs(executionMetrics.getAverageExecutionTimeMs())
+            .build();
     }
     
     public Long getAverageExecutionTimeMs() {
-        return averageExecutionTimeMs;
+        return executionMetrics != null ? executionMetrics.getAverageExecutionTimeMs() : 0L;
     }
     
     public void setAverageExecutionTimeMs(Long averageExecutionTimeMs) {
-        this.averageExecutionTimeMs = averageExecutionTimeMs;
+        if (executionMetrics == null) {
+            executionMetrics = ExecutionMetrics.empty();
+        }
+        this.executionMetrics = ExecutionMetrics.builder()
+            .totalExecutions(executionMetrics.getTotalExecutions())
+            .successfulExecutions(executionMetrics.getSuccessfulExecutions())
+            .failedExecutions(executionMetrics.getFailedExecutions())
+            .averageExecutionTimeMs(averageExecutionTimeMs != null ? averageExecutionTimeMs : 0L)
+            .build();
     }
     
     public Boolean getScheduleEnabled() {
-        return scheduleEnabled;
+        return configuration != null ? configuration.getScheduleSettings().isEnabled() : false;
     }
     
     public void setScheduleEnabled(Boolean scheduleEnabled) {
-        this.scheduleEnabled = scheduleEnabled;
-        if (!scheduleEnabled) {
-            this.nextScheduledRun = null;
+        ScheduleSettings newSchedule = scheduleEnabled != null && scheduleEnabled ?
+            ScheduleSettings.enabled("0 0 2 * * ?") : ScheduleSettings.disabled();
+        
+        if (this.configuration == null) {
+            this.configuration = FlowConfiguration.builder().scheduleSettings(newSchedule).build();
+        } else {
+            this.configuration = this.configuration.withScheduleSettings(newSchedule);
         }
     }
     
     public String getScheduleCron() {
-        return scheduleCron;
+        return configuration != null ? 
+            configuration.getScheduleSettings().getCronExpression().orElse(null) : null;
     }
     
     public void setScheduleCron(String scheduleCron) {
-        this.scheduleCron = scheduleCron;
-        updateNextScheduledRun();
+        if (scheduleCron != null && !scheduleCron.trim().isEmpty()) {
+            ScheduleSettings newSchedule = ScheduleSettings.enabled(scheduleCron.trim());
+            if (this.configuration == null) {
+                this.configuration = FlowConfiguration.builder().scheduleSettings(newSchedule).build();
+            } else {
+                this.configuration = this.configuration.withScheduleSettings(newSchedule);
+            }
+            }
     }
     
     public LocalDateTime getNextScheduledRun() {
-        return nextScheduledRun;
+        return configuration != null ? 
+            configuration.getScheduleSettings().getNextScheduledRun().orElse(null) : null;
     }
     
     public void setNextScheduledRun(LocalDateTime nextScheduledRun) {
-        this.nextScheduledRun = nextScheduledRun;
+        if (configuration != null && configuration.isScheduled()) {
+            ScheduleSettings currentSchedule = configuration.getScheduleSettings();
+            ScheduleSettings updatedSchedule = currentSchedule.withNextRun(nextScheduledRun);
+            this.configuration = this.configuration.withScheduleSettings(updatedSchedule);
+            }
     }
     
     public Boolean getActive() {
@@ -343,6 +404,15 @@ public class IntegrationFlow {
         this.updatedAt = LocalDateTime.now();
     }
     
+    public UUID getOriginalFlowId() {
+        return originalFlowId;
+    }
+    
+    public void setOriginalFlowId(UUID originalFlowId) {
+        this.originalFlowId = originalFlowId;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
     public boolean isActive() {
         return active != null && active;
     }
@@ -351,6 +421,10 @@ public class IntegrationFlow {
         return createdAt;
     }
     
+    /**
+     * Sets the creation timestamp. Should only be used during INSERT operations by persistence layer.
+     * NOTE: For persistence layer use only - not for business logic.
+     */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -359,6 +433,10 @@ public class IntegrationFlow {
         return updatedAt;
     }
     
+    /**
+     * Sets the update timestamp. Should only be used during UPDATE operations by persistence layer.
+     * NOTE: For persistence layer use only - not for business logic.
+     */
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
@@ -367,6 +445,10 @@ public class IntegrationFlow {
         return createdBy;
     }
     
+    /**
+     * Sets the user who created this entity. Should only be used during INSERT operations by persistence layer.
+     * NOTE: For persistence layer use only - not for business logic.
+     */
     public void setCreatedBy(UUID createdBy) {
         this.createdBy = createdBy;
     }
@@ -375,9 +457,12 @@ public class IntegrationFlow {
         return updatedBy;
     }
     
+    /**
+     * Sets the user who last updated this entity. Should only be used during UPDATE operations by persistence layer.
+     * NOTE: For persistence layer use only - not for business logic.
+     */
     public void setUpdatedBy(UUID updatedBy) {
         this.updatedBy = updatedBy;
-        this.updatedAt = LocalDateTime.now();
     }
     
     
@@ -386,12 +471,15 @@ public class IntegrationFlow {
         return "IntegrationFlow{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
-                ", flowType='" + flowType + '\'' +
+                ", flowType='" + getFlowType() + '\'' +
                 ", version=" + flowVersion +
                 ", active=" + active +
-                ", totalExecutions=" + totalExecutions +
+                ", totalExecutions=" + getTotalExecutions() +
                 ", successRate=" + String.format("%.1f%%", getSuccessRate()) +
                 ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", createdBy=" + createdBy +
+                ", updatedBy=" + updatedBy +
                 '}';
     }
     

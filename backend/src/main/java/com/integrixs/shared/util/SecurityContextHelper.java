@@ -51,6 +51,17 @@ public class SecurityContextHelper {
                     com.integrixs.backend.model.User user = (com.integrixs.backend.model.User) principal;
                     return user.getId();
                 }
+                // Check if principal has getId method (system integrator principal)
+                else if (hasGetIdMethod(principal)) {
+                    try {
+                        Object id = principal.getClass().getMethod("getId").invoke(principal);
+                        if (id instanceof UUID) {
+                            return (UUID) id;
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Could not invoke getId method on principal: {}", e.getMessage());
+                    }
+                }
                 // Check if principal is UserDetails with User entity
                 else if (principal instanceof UserDetails) {
                     UserDetails userDetails = (UserDetails) principal;
@@ -74,8 +85,9 @@ public class SecurityContextHelper {
             logger.error("Could not retrieve current user ID: {}", e.getMessage(), e);
         }
         
-        // Throw exception instead of returning hardcoded value to force proper authentication
-        throw new IllegalStateException("No authenticated user found in security context. User must be logged in.");
+        // Throw exception with helpful message for system operations
+        throw new IllegalStateException("No authenticated user found in security context. User must be logged in. " +
+            "For automated flow execution, ensure SystemAuthenticationService.setIntegratorAuthentication() is called first.");
     }
 
     /**
@@ -127,5 +139,16 @@ public class SecurityContextHelper {
             }
         }
         return false;
+    }
+
+    /**
+     * Check if an object has a getId() method
+     */
+    private static boolean hasGetIdMethod(Object obj) {
+        try {
+            return obj.getClass().getMethod("getId") != null;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 }

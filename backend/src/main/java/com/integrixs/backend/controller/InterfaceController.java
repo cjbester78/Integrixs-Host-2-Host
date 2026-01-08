@@ -1,23 +1,34 @@
 package com.integrixs.backend.controller;
 
 import com.integrixs.backend.dto.ApiResponse;
+import com.integrixs.backend.dto.ExecutionValidationResult;
+import com.integrixs.backend.dto.request.InterfaceListRequest;
+import com.integrixs.backend.dto.request.InterfaceOperationRequest;
+import com.integrixs.backend.dto.response.InterfaceDetailsResponse;
+import com.integrixs.backend.dto.response.InterfaceSummaryResponse;
+import com.integrixs.backend.exception.*;
+import com.integrixs.backend.service.InterfaceRequestValidationService;
+import com.integrixs.backend.service.ResponseStandardizationService;
 import com.integrixs.core.service.AdapterManagementService;
 import com.integrixs.core.service.DeployedFlowSchedulingService;
 import com.integrixs.shared.model.Adapter;
-import com.integrixs.shared.util.SecurityContextHelper;
+import com.integrixs.shared.util.AuditUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Interface Controller - Adapter Interface Management
  * Maps to /api/interfaces to match frontend expectations
- * This is essentially an alias/proxy for AdapterController functionality
+ * Refactored to follow OOP principles with proper validation, DTOs, and error handling.
+ * Part of Phase 4 controller layer refactoring.
  */
 @RestController
 @RequestMapping("/api/interfaces")
@@ -27,347 +38,343 @@ public class InterfaceController {
     
     private final AdapterManagementService adapterManagementService;
     private final DeployedFlowSchedulingService deployedFlowSchedulingService;
+    private final InterfaceRequestValidationService validationService;
+    private final ResponseStandardizationService responseService;
     
     @Autowired
     public InterfaceController(AdapterManagementService adapterManagementService,
-                              DeployedFlowSchedulingService deployedFlowSchedulingService) {
+                              DeployedFlowSchedulingService deployedFlowSchedulingService,
+                              InterfaceRequestValidationService validationService,
+                              ResponseStandardizationService responseService) {
         this.adapterManagementService = adapterManagementService;
         this.deployedFlowSchedulingService = deployedFlowSchedulingService;
+        this.validationService = validationService;
+        this.responseService = responseService;
     }
     
     @GetMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
-    public ResponseEntity<ApiResponse<List<Adapter>>> getAllInterfaces(
+    public ResponseEntity<ApiResponse<List<InterfaceSummaryResponse>>> getAllInterfaces(
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "direction", required = false) String direction,
             @RequestParam(value = "enabled", required = false) Boolean enabled) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} requesting interfaces (type: {}, direction: {}, enabled: {})", 
-                   currentUser, type, direction, enabled);
         
-        try {
-            List<Adapter> adapters;
-            
-            if (enabled != null && enabled) {
-                adapters = adapterManagementService.getActiveAdapters();
-            } else if (type != null && direction != null) {
-                adapters = adapterManagementService.getAdaptersByTypeAndDirection(type.toUpperCase(), direction.toUpperCase());
-            } else if (type != null) {
-                adapters = adapterManagementService.getAdaptersByType(type.toUpperCase());
-            } else {
-                adapters = adapterManagementService.getAllAdapters();
-            }
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interfaces retrieved successfully", 
-                adapters
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid parameter from user {}: {}", currentUser, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid parameter: " + e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error retrieving interfaces for user {}: {}", currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve interfaces", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create immutable request DTO
+        InterfaceListRequest listRequest = InterfaceListRequest.builder()
+            .type(type)
+            .direction(direction)
+            .enabled(enabled)
+            .requestedBy(currentUserId)
+            .build();
+        
+        // Validate request using strategy pattern
+        Map<String, Object> validationParams = Map.of(
+            "type", type != null ? type : "",
+            "direction", direction != null ? direction : "",
+            "enabled", enabled != null ? enabled : ""
+        );
+        ExecutionValidationResult validation = validationService.validateListRequest(validationParams);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        List<Adapter> adapters = fetchAdapters(listRequest);
+        List<InterfaceSummaryResponse> interfaceSummaries = adapters.stream()
+            .map(this::mapToSummaryResponse)
+            .collect(Collectors.toList());
+            
+        return responseService.success(interfaceSummaries, "Interfaces retrieved successfully");
     }
     
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
-    public ResponseEntity<ApiResponse<Adapter>> getInterfaceById(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} requesting interface: {}", currentUser, id);
+    public ResponseEntity<ApiResponse<InterfaceDetailsResponse>> getInterfaceById(@PathVariable String id) {
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            Optional<Adapter> adapter = adapterManagementService.getAdapterById(adapterId);
-            
-            if (adapter.isEmpty()) {
-                return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Interface not found", null));
-            }
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface retrieved successfully", 
-                adapter.get()
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid interface ID format: {}", id);
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid interface ID format", null));
-        } catch (Exception e) {
-            logger.error("Error retrieving interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateDetailsRequest(id);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        Optional<Adapter> adapter = adapterManagementService.getAdapterById(adapterId);
+        
+        if (adapter.isEmpty()) {
+            throw new InterfaceNotFoundException(adapterId);
+        }
+        
+        InterfaceDetailsResponse interfaceDetails = mapToDetailsResponse(adapter.get());
+        
+        return responseService.success(interfaceDetails, "Interface retrieved successfully");
     }
     
     @PostMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<ApiResponse<Adapter>> createInterface(@RequestBody Adapter adapterData) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} creating interface: {}", currentUser, adapterData.getName());
+    public ResponseEntity<ApiResponse<InterfaceDetailsResponse>> createInterface(@RequestBody Adapter adapterData) {
         
-        try {
-            UUID createdBy = UUID.fromString(currentUser);
-            Adapter createdAdapter = adapterManagementService.createAdapter(adapterData, createdBy);
-            
-            logger.info("Successfully created interface for user {}", currentUser);
-            return ResponseEntity.status(201)
-                .body(new ApiResponse<>(
-                    true, 
-                    "Interface created successfully", 
-                    createdAdapter
-                ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid interface data from user {}: {}", currentUser, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error creating interface for user {}: {}", currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to create interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateCreateRequest(adapterData);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        Adapter createdAdapter = adapterManagementService.createAdapter(adapterData, currentUserId);
+        InterfaceDetailsResponse interfaceDetails = mapToDetailsResponse(createdAdapter);
+        
+        return responseService.created(interfaceDetails, "Interface created successfully");
     }
     
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<ApiResponse<Adapter>> updateInterface(
+    public ResponseEntity<ApiResponse<InterfaceDetailsResponse>> updateInterface(
             @PathVariable String id, 
             @RequestBody Adapter adapterData) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} updating interface: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            UUID updatedBy = UUID.fromString(currentUser);
-            Adapter updatedAdapter = adapterManagementService.updateAdapter(adapterId, adapterData, updatedBy);
-            
-            logger.info("Successfully updated interface {} for user {}", id, currentUser);
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface updated successfully", 
-                updatedAdapter
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error updating interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateUpdateRequest(id, adapterData);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        Adapter updatedAdapter = adapterManagementService.updateAdapter(adapterId, adapterData, currentUserId);
+        InterfaceDetailsResponse interfaceDetails = mapToDetailsResponse(updatedAdapter);
+        
+        return responseService.success(interfaceDetails, "Interface updated successfully");
     }
     
     @PutMapping("/{id}/enabled")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Void>> setInterfaceEnabled(@PathVariable String id, @RequestParam(value = "enabled") boolean enabled) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} setting interface {} enabled status to: {}", currentUser, id, enabled);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            adapterManagementService.setAdapterActive(adapterId, enabled);
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface enabled status updated successfully", 
-                null
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error updating interface enabled status {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update interface enabled status", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create operation request
+        InterfaceOperationRequest operationRequest = InterfaceOperationRequest.enableRequest(
+            UUID.fromString(id), enabled, currentUserId
+        );
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateLifecycleRequest(id, operationRequest.getOperation());
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        adapterManagementService.setAdapterActive(adapterId, enabled);
+        
+        return responseService.success(null, "Interface enabled status updated successfully");
     }
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Void>> deleteInterface(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} deleting interface: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            boolean deleted = adapterManagementService.deleteAdapter(adapterId);
-            
-            if (deleted) {
-                logger.info("Successfully deleted interface {} for user {}", id, currentUser);
-                return ResponseEntity.ok(new ApiResponse<>(
-                    true, 
-                    "Interface deleted successfully", 
-                    null
-                ));
-            } else {
-                return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Interface not found", null));
-            }
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error deleting interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to delete interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateDeleteRequest(id);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        boolean deleted = adapterManagementService.deleteAdapter(adapterId);
+        
+        if (!deleted) {
+            throw new InterfaceNotFoundException(adapterId);
+        }
+        
+        return responseService.success(null, "Interface deleted successfully");
     }
     
     @PostMapping("/{id}/test")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> testInterface(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} testing interface connection: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            Map<String, Object> testResult = adapterManagementService.testAdapterConnection(adapterId);
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface connection test completed", 
-                testResult
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error testing interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to test interface connection", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create operation request
+        InterfaceOperationRequest operationRequest = InterfaceOperationRequest.testRequest(
+            UUID.fromString(id), currentUserId
+        );
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateTestRequest(id);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        Map<String, Object> testResult = adapterManagementService.testAdapterConnection(adapterId);
+        
+        return responseService.success(testResult, "Interface connection test completed");
     }
     
     @PostMapping("/{id}/execute")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> executeInterface(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} executing interface: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            UUID currentUserId = UUID.fromString(currentUser);
-            
-            // Use the real flow execution instead of simulation mode
-            Map<String, Object> executeResult = deployedFlowSchedulingService.manuallyTriggerAdapterExecution(adapterId, currentUserId);
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface execution initiated successfully", 
-                executeResult
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error executing interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to execute interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create operation request
+        InterfaceOperationRequest operationRequest = InterfaceOperationRequest.executeRequest(
+            UUID.fromString(id), currentUserId
+        );
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateExecuteRequest(id);
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        Map<String, Object> executeResult = deployedFlowSchedulingService.manuallyTriggerAdapterExecution(adapterId, currentUserId);
+        
+        return responseService.success(executeResult, "Interface execution initiated successfully");
     }
     
     @PostMapping("/{id}/start")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Void>> startInterface(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} starting interface: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            adapterManagementService.startAdapter(adapterId);
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface started successfully", 
-                null
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error starting interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to start interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create operation request
+        InterfaceOperationRequest operationRequest = InterfaceOperationRequest.startRequest(
+            UUID.fromString(id), currentUserId
+        );
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateLifecycleRequest(id, "start");
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        adapterManagementService.startAdapter(adapterId);
+        
+        return responseService.success(null, "Interface started successfully");
     }
     
     @PostMapping("/{id}/stop")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Void>> stopInterface(@PathVariable String id) {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} stopping interface: {}", currentUser, id);
         
-        try {
-            UUID adapterId = UUID.fromString(id);
-            adapterManagementService.stopAdapter(adapterId);
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface stopped successfully", 
-                null
-            ));
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid request from user {} for interface {}: {}", currentUser, id, e.getMessage());
-            return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
-        } catch (Exception e) {
-            logger.error("Error stopping interface {} for user {}: {}", id, currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to stop interface", null));
+        UUID currentUserId = getCurrentUserId();
+        
+        // Create operation request
+        InterfaceOperationRequest operationRequest = InterfaceOperationRequest.stopRequest(
+            UUID.fromString(id), currentUserId
+        );
+        
+        // Validate request using strategy pattern
+        ExecutionValidationResult validation = validationService.validateLifecycleRequest(id, "stop");
+        if (!validation.isValid()) {
+            throw new InterfaceValidationException(validation);
         }
+        
+        UUID adapterId = UUID.fromString(id);
+        adapterManagementService.stopAdapter(adapterId);
+        
+        return responseService.success(null, "Interface stopped successfully");
     }
     
     @GetMapping("/statistics")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getInterfaceStatistics() {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} requesting interface statistics", currentUser);
         
-        try {
-            Map<String, Object> statistics = adapterManagementService.getAdapterStatistics();
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Interface statistics retrieved successfully", 
-                statistics
-            ));
-        } catch (Exception e) {
-            logger.error("Error retrieving interface statistics for user {}: {}", currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve interface statistics", null));
-        }
+        Map<String, Object> statistics = adapterManagementService.getAdapterStatistics();
+        
+        return responseService.success(statistics, "Interface statistics retrieved successfully");
     }
     
     @GetMapping("/types")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
     public ResponseEntity<ApiResponse<List<String>>> getSupportedTypes() {
-        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} requesting supported interface types", currentUser);
         
+        List<String> supportedTypes = List.of("FILE", "SFTP", "EMAIL");
+        
+        return responseService.success(supportedTypes, "Supported interface types retrieved successfully");
+    }
+    
+    // ===============================
+    // Private Helper Methods - OOP Refactoring Support
+    // ===============================
+    
+    /**
+     * Get current user ID using AuditUtils for consistency.
+     */
+    private UUID getCurrentUserId() {
         try {
-            // Return supported adapter types
-            List<String> supportedTypes = List.of("FILE", "SFTP", "EMAIL");
-            
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Supported interface types retrieved successfully", 
-                supportedTypes
-            ));
-        } catch (Exception e) {
-            logger.error("Error retrieving supported interface types for user {}: {}", currentUser, e.getMessage(), e);
-            return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve supported interface types", null));
+            String userIdString = AuditUtils.getCurrentUserId();
+            return UUID.fromString(userIdString);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID format", e);
         }
+    }
+    
+    /**
+     * Fetch adapters based on list request filters.
+     */
+    private List<Adapter> fetchAdapters(InterfaceListRequest listRequest) {
+        if (listRequest.getEnabled() != null && listRequest.getEnabled()) {
+            return adapterManagementService.getActiveAdapters();
+        } else if (listRequest.getType() != null && listRequest.getDirection() != null) {
+            return adapterManagementService.getAdaptersByTypeAndDirection(
+                listRequest.getType().toUpperCase(), 
+                listRequest.getDirection().toUpperCase()
+            );
+        } else if (listRequest.getType() != null) {
+            return adapterManagementService.getAdaptersByType(listRequest.getType().toUpperCase());
+        } else {
+            return adapterManagementService.getAllAdapters();
+        }
+    }
+    
+    /**
+     * Map Adapter entity to InterfaceSummaryResponse DTO.
+     */
+    private InterfaceSummaryResponse mapToSummaryResponse(Adapter adapter) {
+        return InterfaceSummaryResponse.builder()
+            .id(adapter.getId())
+            .name(adapter.getName())
+            .adapterType(adapter.getAdapterType())
+            .direction(adapter.getDirection())
+            .isActive(adapter.isActive())
+            .status(adapter.isActive() ? "ACTIVE" : "INACTIVE")
+            .description(adapter.getDescription())
+            .createdAt(adapter.getCreatedAt())
+            .updatedAt(adapter.getUpdatedAt())
+            .build();
+    }
+    
+    /**
+     * Map Adapter entity to InterfaceDetailsResponse DTO.
+     */
+    private InterfaceDetailsResponse mapToDetailsResponse(Adapter adapter) {
+        return InterfaceDetailsResponse.builder()
+            .id(adapter.getId())
+            .name(adapter.getName())
+            .description(adapter.getDescription())
+            .adapterType(adapter.getAdapterType())
+            .direction(adapter.getDirection())
+            .isActive(adapter.isActive())
+            .status(adapter.isActive() ? "ACTIVE" : "INACTIVE")
+            .configuration(adapter.getConfiguration())
+            .createdBy(adapter.getCreatedBy())
+            .updatedBy(adapter.getUpdatedBy())
+            .createdAt(adapter.getCreatedAt())
+            .updatedAt(adapter.getUpdatedAt())
+            .version("1.0") // Could be derived from adapter metadata
+            .build();
     }
 }

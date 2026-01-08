@@ -35,9 +35,9 @@ public class UserSession {
     }
 
     /**
-     * Initialize timestamps if null
+     * Initialize creation timestamp if null. Should only be called during INSERT operations.
      */
-    public void initializeTimestamps() {
+    void initializeCreatedAt() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

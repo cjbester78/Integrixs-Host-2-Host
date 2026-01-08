@@ -110,12 +110,10 @@ const AdapterConfiguration: React.FC = () => {
   // Update form values when system config loads (only for new adapters)
   useEffect(() => {
     if (systemConfig.length > 0 && !isEditing) {
-      const pollInterval = systemConfig.find((c: any) => c.configKey === 'file.processing.poll_interval_seconds')?.configValue
       const retryInterval = systemConfig.find((c: any) => c.configKey === 'file.processing.retry_interval_seconds')?.configValue
       const modificationDelay = systemConfig.find((c: any) => c.configKey === 'file.processing.modification_check_delay_ms')?.configValue
       const maxFileSizeMB = systemConfig.find((c: any) => c.configKey === 'file.processing.max_file_size_mb')?.configValue
       
-      if (pollInterval) setValue('configuration.pollInterval', pollInterval)
       if (retryInterval) setValue('configuration.retryInterval', retryInterval)
       if (modificationDelay) setValue('configuration.msecsToWaitBeforeModificationCheck', modificationDelay)
       if (maxFileSizeMB) {
@@ -345,8 +343,8 @@ const AdapterConfiguration: React.FC = () => {
                         <SelectValue placeholder="Select direction" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SENDER">Sender (Send Files Out)</SelectItem>
-                        <SelectItem value="RECEIVER">Receiver (Receive Files In)</SelectItem>
+                        <SelectItem value="SENDER">Sender</SelectItem>
+                        <SelectItem value="RECEIVER">Receiver</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -607,19 +605,7 @@ const FileAdapterConfig: React.FC<any> = ({ direction, control, register, errors
     {direction === 'SENDER' ? (
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-4">Processing Parameters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="pollInterval">Poll Interval (secs)</Label>
-            <Input
-              id="pollInterval"
-              type="number"
-              {...register('configuration.pollInterval')}
-              placeholder="60"
-              defaultValue={systemConfig?.find((c: any) => c.configKey === 'file.processing.poll_interval_seconds')?.configValue || "60"}
-              min="1"
-            />
-          </div>
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="retryInterval">Retry Interval (secs)</Label>
             <Input
@@ -1687,7 +1673,7 @@ const SftpAdapterConfig: React.FC<any> = ({ direction, control, register, errors
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="mt-4">
               <div className="space-y-2">
                 <Label htmlFor="excludePattern">Exclude Pattern</Label>
                 <Input
@@ -1697,35 +1683,8 @@ const SftpAdapterConfig: React.FC<any> = ({ direction, control, register, errors
                   {...register('configuration.excludePattern')}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="temporaryFileSuffix">Temporary File Suffix</Label>
-                <Input
-                  id="temporaryFileSuffix"
-                  placeholder=".tmp"
-                  defaultValue=".tmp"
-                  className="bg-input border-border text-foreground"
-                  {...register('configuration.temporaryFileSuffix')}
-                />
-              </div>
             </div>
 
-            <div className="flex items-center space-x-2 mt-4">
-              <Controller
-                name="configuration.useTemporaryFileName"
-                control={control}
-                render={({ field }) => (
-                  <input
-                    type="checkbox"
-                    id="useTemporaryFileName"
-                    checked={Boolean(field.value)}
-                    onChange={field.onChange}
-                    className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary"
-                  />
-                )}
-              />
-              <Label htmlFor="useTemporaryFileName">Use Temporary File Name</Label>
-            </div>
           </div>
 
           {/* Scheduler Settings */}
@@ -2107,17 +2066,7 @@ const SftpPostProcessingSettings: React.FC<any> = ({ control, register }) => {
         )}
 
         {watchPostProcessAction === 'KEEP_AND_REPROCESS' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="reprocessingDirectory">Reprocessing Directory</Label>
-              <Input
-                id="reprocessingDirectory"
-                placeholder="/data/reprocess"
-                className="bg-input border-border text-foreground"
-                {...register('configuration.reprocessingDirectory')}
-              />
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
             <div className="space-y-2">
               <Label htmlFor="reprocessingDelay">Reprocessing Delay (ms)</Label>
               <Input

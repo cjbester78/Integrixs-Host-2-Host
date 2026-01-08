@@ -11,14 +11,6 @@ interface ManualFlowExecutionModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-interface Flow {
-  id: string
-  name: string
-  description?: string
-  active?: boolean
-  deploymentStatus?: string
-  deployed?: boolean
-}
 
 export const ManualFlowExecutionModal: React.FC<ManualFlowExecutionModalProps> = ({
   open,
@@ -28,11 +20,13 @@ export const ManualFlowExecutionModal: React.FC<ManualFlowExecutionModalProps> =
   const queryClient = useQueryClient()
 
   // Fetch all flows
-  const { data: flows, isLoading: flowsLoading } = useQuery<Flow[]>({
+  const { data: flowsResponse, isLoading: flowsLoading } = useQuery({
     queryKey: ['flows'],
     queryFn: flowApi.getAllFlows,
     enabled: open, // Only fetch when modal is open
   })
+
+  const flows = flowsResponse?.data || []
 
   // Execute flow mutation
   const executeFlowMutation = useMutation({
@@ -55,8 +49,9 @@ export const ManualFlowExecutionModal: React.FC<ManualFlowExecutionModalProps> =
   }
 
   const activeFlows = Array.isArray(flows) ? flows.filter(flow => 
-    flow.active !== false && 
-    (flow.deploymentStatus === 'DEPLOYED' || flow.deployed === true)
+    flow.active === true && 
+    flow.deployed === true &&
+    flow.deploymentStatus === 'DEPLOYED'
   ) : []
 
   return (

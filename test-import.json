@@ -1,0 +1,14 @@
+{
+  "version": "H2H_FLOW_V1",
+  "name": "Test Flow",
+  "description": "Test import flow",
+  "bankName": "Test Bank",
+  "flowDefinition": {
+    "nodes": [],
+    "edges": []
+  },
+  "flowType": "BIDIRECTIONAL",
+  "maxParallelExecutions": 1,
+  "timeoutMinutes": 30,
+  "active": true
+}

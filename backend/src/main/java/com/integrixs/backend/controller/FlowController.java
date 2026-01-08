@@ -103,15 +103,14 @@ public class FlowController {
                 enrichedFlows.add(flowData);
             }
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flows retrieved successfully", 
                 enrichedFlows
             ));
         } catch (Exception e) {
             logger.error("Error retrieving integration flows for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve integration flows", null));
+                .body(ApiResponse.error("Failed to retrieve integration flows"));
         }
     }
     
@@ -127,22 +126,21 @@ public class FlowController {
             
             if (flow.isEmpty()) {
                 return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Flow not found", null));
+                    .body(ApiResponse.error("Flow not found"));
             }
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flow retrieved successfully", 
                 flow.get()
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid flow ID format: {}", id);
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid flow ID format", null));
+                .body(ApiResponse.error("Invalid flow ID format"));
         } catch (Exception e) {
             logger.error("Error retrieving integration flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve integration flow", null));
+                .body(ApiResponse.error("Failed to retrieve integration flow"));
         }
     }
     
@@ -158,19 +156,18 @@ public class FlowController {
             
             logger.info("Successfully created integration flow for user {}", currentUser);
             return ResponseEntity.status(201)
-                .body(new ApiResponse<>(
-                    true, 
+                .body(ApiResponse.success(
                     "Integration flow created successfully", 
                     createdFlow
                 ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid flow data from user {}: {}", currentUser, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error creating integration flow for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to create integration flow", null));
+                .body(ApiResponse.error("Failed to create integration flow"));
         }
     }
     
@@ -191,19 +188,18 @@ public class FlowController {
             
             logger.info("Successfully updated integration flow {} for user {}", id, currentUser);
             logger.debug("Updated flow - Name: {}, Active: {}", updatedFlow.getName(), updatedFlow.getActive());
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flow updated successfully", 
                 updatedFlow
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error updating integration flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update integration flow", null));
+                .body(ApiResponse.error("Failed to update integration flow"));
         }
     }
     
@@ -219,23 +215,21 @@ public class FlowController {
             
             if (deleted) {
                 logger.info("Successfully deleted integration flow {} for user {}", id, currentUser);
-                return ResponseEntity.ok(new ApiResponse<>(
-                    true, 
-                    "Integration flow deleted successfully", 
-                    null
+                return ResponseEntity.ok(ApiResponse.success(
+                    "Integration flow deleted successfully"
                 ));
             } else {
                 return ResponseEntity.status(404)
-                    .body(new ApiResponse<>(false, "Flow not found", null));
+                    .body(ApiResponse.error("Flow not found"));
             }
         } catch (IllegalArgumentException e) {
             logger.error("Invalid flow ID format: {}", id);
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid flow ID format", null));
+                .body(ApiResponse.error("Invalid flow ID format"));
         } catch (Exception e) {
             logger.error("Error deleting integration flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to delete integration flow", null));
+                .body(ApiResponse.error("Failed to delete integration flow"));
         }
     }
     
@@ -264,19 +258,18 @@ public class FlowController {
             executionResult.put("correlationId", execution.getCorrelationId());
             
             logger.info("Successfully started flow execution {} for user {}", execution.getId(), currentUser);
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flow execution started successfully", 
                 executionResult
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error executing integration flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to execute integration flow", null));
+                .body(ApiResponse.error("Failed to execute integration flow"));
         }
     }
     
@@ -290,19 +283,18 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             Map<String, Object> validation = flowDefinitionService.validateFlow(flowId);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Flow validation completed", 
                 validation
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error validating integration flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to validate integration flow", null));
+                .body(ApiResponse.error("Failed to validate integration flow"));
         }
     }
     
@@ -316,19 +308,17 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             flowDefinitionService.setFlowActive(flowId, active);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
-                "Flow active status updated successfully", 
-                null
+            return ResponseEntity.ok(ApiResponse.success(
+                "Flow active status updated successfully"
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error updating flow active status {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to update flow active status", null));
+                .body(ApiResponse.error("Failed to update flow active status"));
         }
     }
     
@@ -342,19 +332,18 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             List<com.integrixs.shared.model.FlowExecution> executions = flowExecutionService.getExecutionsByFlowId(flowId);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Flow executions retrieved successfully", 
                 executions
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid flow ID format: {}", id);
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, "Invalid flow ID format", null));
+                .body(ApiResponse.error("Invalid flow ID format"));
         } catch (Exception e) {
             logger.error("Error retrieving executions for flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve flow executions", null));
+                .body(ApiResponse.error("Failed to retrieve flow executions"));
         }
     }
     
@@ -367,15 +356,14 @@ public class FlowController {
         try {
             Map<String, Object> statistics = flowDefinitionService.getFlowStatistics();
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Flow statistics retrieved successfully", 
                 statistics
             ));
         } catch (Exception e) {
             logger.error("Error retrieving flow statistics for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to retrieve flow statistics", null));
+                .body(ApiResponse.error("Failed to retrieve flow statistics"));
         }
     }
     
@@ -389,19 +377,18 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             Map<String, Object> exportData = flowDefinitionService.exportFlow(flowId);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Flow exported successfully", 
                 exportData
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUser, id, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error exporting flow {} for user {}: {}", id, currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to export flow", null));
+                .body(ApiResponse.error("Failed to export flow"));
         }
     }
     
@@ -416,19 +403,18 @@ public class FlowController {
             IntegrationFlow importedFlow = flowDefinitionService.importFlow(importData, importedBy);
             
             return ResponseEntity.status(201)
-                .body(new ApiResponse<>(
-                    true, 
+                .body(ApiResponse.success(
                     "Flow imported successfully", 
                     importedFlow
                 ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid import data from user {}: {}", currentUser, e.getMessage());
             return ResponseEntity.status(400)
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error importing flow for user {}: {}", currentUser, e.getMessage(), e);
             return ResponseEntity.status(500)
-                .body(new ApiResponse<>(false, "Failed to import flow", null));
+                .body(ApiResponse.error("Failed to import flow"));
         }
     }
     
@@ -446,19 +432,18 @@ public class FlowController {
             Map<String, Object> deploymentResult = flowDefinitionService.deployFlow(flowId, currentUserId);
             
             logger.info("Successfully deployed integration flow {} by user {}", id, currentUserId);
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flow deployed successfully", 
                 deploymentResult
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error deploying integration flow {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(new ApiResponse<>(false, "Failed to deploy integration flow", null));
+                .body(ApiResponse.error("Failed to deploy integration flow"));
         }
     }
     
@@ -476,19 +461,18 @@ public class FlowController {
             Map<String, Object> undeploymentResult = flowDefinitionService.undeployFlow(flowId, currentUserId);
             
             logger.info("Successfully undeployed integration flow {} by user {}", id, currentUserId);
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Integration flow undeployed successfully", 
                 undeploymentResult
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error undeploying integration flow {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(new ApiResponse<>(false, "Failed to undeploy integration flow", null));
+                .body(ApiResponse.error("Failed to undeploy integration flow"));
         }
     }
     
@@ -505,19 +489,18 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             Map<String, Object> deploymentStatus = flowDefinitionService.getDeploymentStatus(flowId);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Deployment status retrieved successfully", 
                 deploymentStatus
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error retrieving deployment status for flow {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(new ApiResponse<>(false, "Failed to retrieve deployment status", null));
+                .body(ApiResponse.error("Failed to retrieve deployment status"));
         }
     }
     
@@ -534,19 +517,18 @@ public class FlowController {
             UUID flowId = UUID.fromString(id);
             Map<String, Object> validationResult = flowDefinitionService.validateDeployment(flowId);
             
-            return ResponseEntity.ok(new ApiResponse<>(
-                true, 
+            return ResponseEntity.ok(ApiResponse.success(
                 "Deployment validation completed", 
                 validationResult
             ));
         } catch (IllegalArgumentException e) {
             logger.error("Invalid request from user {} for flow {}: {}", currentUserId, id, e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, e.getMessage(), null));
+                .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error validating deployment for flow {} for user {}: {}", id, currentUserId, e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                .body(new ApiResponse<>(false, "Failed to validate deployment readiness", null));
+                .body(ApiResponse.error("Failed to validate deployment readiness"));
         }
     }
 }

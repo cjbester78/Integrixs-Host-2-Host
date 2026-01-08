@@ -1,59 +1,44 @@
 package com.integrixs.backend.config;
 
-import org.springframework.context.annotation.Bean;
+import com.integrixs.backend.interceptor.AdministrativeAuditLoggingInterceptor;
+import com.integrixs.backend.interceptor.InterfaceAuditLoggingInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-
 /**
- * Web configuration for CORS and other MVC settings
+ * Web configuration - CORS disabled for production
+ * Configures audit logging interceptors for controller operations
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-            .allowedOrigins(
-                "http://localhost:5173", // Vite dev server
-                "http://localhost:3000",  // Alternative React dev server
-                "https://49389ba1-4043-4ed2-8188-f375c842a571.lovableproject.com", // Frontend deployment
-                "https://nonportable-astrictively-lorelai.ngrok-free.dev" // ngrok tunnel
-            )
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-            .allowedHeaders("Content-Type", "Authorization", "ngrok-skip-browser-warning")
-            .allowCredentials(true)
-            .maxAge(3600);
+    private final InterfaceAuditLoggingInterceptor interfaceAuditLoggingInterceptor;
+    private final AdministrativeAuditLoggingInterceptor administrativeAuditLoggingInterceptor;
+    
+    public WebConfig(InterfaceAuditLoggingInterceptor interfaceAuditLoggingInterceptor,
+                    AdministrativeAuditLoggingInterceptor administrativeAuditLoggingInterceptor) {
+        this.interfaceAuditLoggingInterceptor = interfaceAuditLoggingInterceptor;
+        this.administrativeAuditLoggingInterceptor = administrativeAuditLoggingInterceptor;
     }
 
-    @Bean
-    public Filter ngrokHeaderFilter() {
-        return new Filter() {
-            @Override
-            public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-                    throws IOException, ServletException {
-                
-                HttpServletRequest httpRequest = (HttpServletRequest) request;
-                HttpServletResponse httpResponse = (HttpServletResponse) response;
-                
-                // Check if request is coming through ngrok
-                String host = httpRequest.getHeader("Host");
-                if (host != null && (host.contains("ngrok") || host.contains("ngrok-free.dev"))) {
-                    // Add response header to bypass ngrok warning
-                    httpResponse.setHeader("ngrok-skip-browser-warning", "true");
-                }
-                
-                chain.doFilter(request, response);
-            }
-        };
+    // CORS configuration removed - not needed in production
+    // Frontend served from same domain/port
+    
+    /**
+     * Configure interceptors for audit logging.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // Register interface audit logging interceptor for all interface controller paths
+        registry.addInterceptor(interfaceAuditLoggingInterceptor)
+                .addPathPatterns("/api/interfaces/**")
+                .order(1); // Execute first for complete request/response cycle logging
+        
+        // Register administrative audit logging interceptor for all admin controller paths
+        registry.addInterceptor(administrativeAuditLoggingInterceptor)
+                .addPathPatterns("/api/admin/**", "/api/logs/**", "/api/system/**", "/api/users/**", "/api/config/**", "/api/data-retention/**")
+                .order(2); // Execute after interface interceptor
     }
 }

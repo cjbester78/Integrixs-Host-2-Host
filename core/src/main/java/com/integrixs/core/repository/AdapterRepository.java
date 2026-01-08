@@ -181,7 +181,18 @@ public class AdapterRepository {
         adapter.setCreatedAt(now);
         // Don't set updated_at for new records
         
-        String createdBy = AuditUtils.getCurrentUserId();
+        String createdByStr = AuditUtils.getCurrentUserId();
+        UUID createdBy;
+        try {
+            createdBy = UUID.fromString(createdByStr);
+        } catch (IllegalArgumentException e) {
+            // If still not a valid UUID, use the createdBy from the adapter object if available
+            if (adapter.getCreatedBy() != null) {
+                createdBy = adapter.getCreatedBy();
+            } else {
+                throw new RuntimeException("Unable to determine valid user ID for audit trail: " + createdByStr);
+            }
+        }
         
         String sql = """
             INSERT INTO adapters (
@@ -223,7 +234,18 @@ public class AdapterRepository {
      */
     public void update(Adapter adapter) {
         adapter.setUpdatedAt(LocalDateTime.now());
-        String updatedBy = AuditUtils.getCurrentUserId();
+        String updatedByStr = AuditUtils.getCurrentUserId();
+        UUID updatedBy;
+        try {
+            updatedBy = UUID.fromString(updatedByStr);
+        } catch (IllegalArgumentException e) {
+            // If still not a valid UUID, use the updatedBy from the adapter object if available
+            if (adapter.getUpdatedBy() != null) {
+                updatedBy = adapter.getUpdatedBy();
+            } else {
+                throw new RuntimeException("Unable to determine valid user ID for audit trail: " + updatedByStr);
+            }
+        }
         
         String sql = """
             UPDATE adapters SET

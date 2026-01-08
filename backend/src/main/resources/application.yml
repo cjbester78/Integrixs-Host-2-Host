@@ -1,8 +1,8 @@
 # H2H File Transfer Application Configuration
-# Default configuration (development profile)
+# Minimal configuration - All business configuration stored in database
 
 server:
-  port: 8080
+  port: 8080  # HTTP port
   servlet:
     context-path: /
   compression:
@@ -19,7 +19,21 @@ spring:
   profiles:
     active: dev
   
-  # Jackson configuration
+  # Task configuration (Spring framework essentials)
+  task:
+    scheduling:
+      enabled: true
+      pool:
+        size: 2
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: 60s
+      thread-name-prefix: h2h-task-
+  
+  # Jackson configuration (serialization framework)
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -29,17 +43,7 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
   
-  # Async configuration
-  task:
-    execution:
-      pool:
-        core-size: 4
-        max-size: 16
-        queue-capacity: 100
-        keep-alive: 60s
-      thread-name-prefix: h2h-task-
-  
-  # Database Configuration (PostgreSQL for development)
+  # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/h2h_dev
     driver-class-name: org.postgresql.Driver
@@ -62,96 +66,14 @@ spring:
 
 # H2H Application Configuration
 h2h:
-  # Security Configuration
-  security:
-    cors:
-      allowed-origins:
-        - http://localhost:3000
-        - http://localhost:5173
-        - http://127.0.0.1:3000
-        - http://127.0.0.1:5173
-        - https://*.ngrok.io
-        - https://*.ngrok-free.app
-      allowed-methods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - PATCH
-        - OPTIONS
-        - HEAD
-      allowed-headers: "*"
-      allow-credentials: true
-      max-age: 3600
+  # Multi-port server configuration
+  server:
+    http-port: 8080
+    https-port: 8443
+    ssl-enabled: false
 
-  # JWT Configuration
-  jwt:
-    secret: H2HFileTransferSecretKeyForJWTTokenGenerationAndSigningSecure2024!!
-    expiration: 86400000  # 24 hours in milliseconds
-    refresh-expiration: 604800000  # 7 days in milliseconds
-
-  # Base configuration
-  config:
-    base-path: ${H2H_BASE_PATH:${user.dir}}
-    environment: ${H2H_ENVIRONMENT:dev}
-
-  # File Processing Configuration
-  file:
-    temp-directory: ${user.home}/.h2h/temp
-    archive-directory: ${user.home}/.h2h/archive
-    max-file-size: 100MB
-    allowed-extensions:
-      - .txt
-      - .csv
-      - .xml
-      - .json
-      - .xlsx
-      - .xls
-      - .pdf
-      - .zip
-      - .pgp
-      - .gpg
-
-  # SFTP Configuration  
-  sftp:
-    default-session-timeout: 60000
-    default-channel-timeout: 60000
-    connection-pool-size: 5
-    retry-attempts: 3
-    retry-delay-seconds: 5
-
-  # Adapter Configuration
-  adapters:
-    execution-timeout: 300000  # 5 minutes in milliseconds
-    max-retry-attempts: 3
-    retry-delay: 30000  # 30 seconds
-    concurrent-executions: 5
-    
-  # PGP Configuration (Optional)
-  pgp:
-    key-directory: ${user.home}/.h2h/pgp-keys
-    temp-directory: ${user.home}/.h2h/pgp-temp
-    
-  # SSH Configuration
-  ssh:
-    key-directory: ${user.home}/.h2h/ssh-keys
-    connection-timeout: 60000  # 60 seconds
-    session-timeout: 300000   # 5 minutes
-
-  # Monitoring Configuration
-  monitoring:
-    metrics-enabled: true
-    health-check-interval: 30000  # 30 seconds
-    execution-history-retention: 30  # days
-
-# Logging Configuration
+# Basic Logging Configuration (file output only)
 logging:
-  level:
-    root: INFO
-    com.integrixs: DEBUG
-    org.springframework.security: INFO
-    org.springframework.web: INFO
-    com.jcraft.jsch: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId:-}][%X{bankName:-}][%X{operationId:-}] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{correlationId:-}][%X{bankName:-}][%X{operationId:-}] %logger{36} - %msg%n"
@@ -199,7 +121,6 @@ spring:
     activate:
       on-profile: dev
 
-  # Development Database (same PostgreSQL config)
   datasource:
     url: jdbc:postgresql://localhost:5432/h2h_dev
     driver-class-name: org.postgresql.Driver
@@ -207,14 +128,18 @@ spring:
     password: ${DB_PASSWORD:h2h_dev_password}
 
 h2h:
-  # Development-specific overrides
-  file:
-    temp-directory: ./temp/h2h-dev
-    archive-directory: ./archive/h2h-dev
-    
-  jwt:
-    secret: H2HFileTransferDevSecretKeyForJWTTokenGenerationAndSigningSecure2024!!
-    
+  server:
+    ssl-enabled: false
+
+# SSL disabled for dev profile - using HTTP only
+# server:
+#   ssl:
+#     enabled: true
+#     key-store: classpath:ssl/h2h-dev-keystore.p12
+#     key-store-password: h2h-dev-password
+#     key-store-type: PKCS12
+#     key-alias: h2h-dev
+
 logging:
   level:
     com.integrixs: DEBUG
@@ -230,25 +155,20 @@ spring:
     activate:
       on-profile: prod
 
-server:
-  port: 8443
-  ssl:
-    enabled: false  # Configure SSL in production
-    
 h2h:
-  # Production security settings
-  jwt:
-    secret: ${H2H_JWT_SECRET:CHANGE_THIS_IN_PRODUCTION}
-    
-  # Production file settings
-  file:
-    temp-directory: /opt/h2h/temp
-    archive-directory: /opt/h2h/archive
-    
-  # Production monitoring
-  monitoring:
-    metrics-enabled: true
-    
+  server:
+    http-port: 8080
+    https-port: 443
+    ssl-enabled: true
+
+server:
+  ssl:
+    enabled: true
+    key-store: /opt/h2h/ssl/keystore.p12
+    key-store-password: ${SSL_KEYSTORE_PASSWORD:changeme}
+    key-store-type: PKCS12
+    key-alias: h2h
+
 logging:
   level:
     root: WARN
@@ -263,17 +183,6 @@ spring:
   config:
     activate:
       on-profile: docker
-
-h2h:
-  file:
-    temp-directory: /app/temp
-    archive-directory: /app/archive
-    
-  pgp:
-    key-directory: /app/keys/pgp
-    
-  ssh:
-    key-directory: /app/keys/ssh
 
 logging:
   file:

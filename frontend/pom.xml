@@ -13,7 +13,7 @@
     <artifactId>frontend</artifactId>
     <packaging>pom</packaging>
 
-    <name>H2H Frontend</name>
+    <name>Frontend</name>
     <description>React frontend for Integrixs Host 2 Host monitoring and management</description>
 
     <build>

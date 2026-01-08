@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { 
@@ -10,6 +10,7 @@ import {
   Eye,
   GitBranch,
   Download,
+  Upload,
   Clock,
   Play,
   Square,
@@ -20,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useNotifications } from '@/stores/ui'
 import { usePermissions } from '@/hooks/auth'
+import { useEnvironment } from '@/hooks/useEnvironment'
 import { 
   useWebSocketConnection, 
   useFlowExecutionUpdates, 
@@ -58,8 +60,10 @@ interface FlowDefinition {
 
 const FlowManagement: React.FC = () => {
   const { isAdmin } = usePermissions()
+  const { data: environment } = useEnvironment()
   const { success, error } = useNotifications()
   const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // WebSocket connection status
   const { status: _wsStatus } = useWebSocketConnection()
@@ -143,6 +147,18 @@ const FlowManagement: React.FC = () => {
     },
   })
 
+  const importFlowMutation = useMutation({
+    mutationFn: flowApi.importFlow,
+    onSuccess: () => {
+      success('Flow Imported', 'Flow and associated adapters imported successfully. Please configure environment-specific connection details for imported adapters.')
+      queryClient.invalidateQueries({ queryKey: ['flows'] })
+      queryClient.invalidateQueries({ queryKey: ['flowStatistics'] })
+    },
+    onError: (err: any) => {
+      error('Import Failed', err.response?.data?.message || 'Failed to import flow')
+    },
+  })
+
   const deployFlowMutation = useMutation({
     mutationFn: flowApi.deployFlow,
     onSuccess: () => {
@@ -169,6 +185,26 @@ const FlowManagement: React.FC = () => {
     },
   })
 
+  // Handle file import
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const flowData = JSON.parse(e.target?.result as string)
+        importFlowMutation.mutate(flowData)
+      } catch (parseError) {
+        error('Invalid File', 'Please select a valid JSON file exported from the system')
+      }
+    }
+    reader.readAsText(file)
+    
+    // Reset the input
+    event.target.value = ''
+  }
+
 
   // Removed unused getAdapterIcon function since we're using specific icons now
 
@@ -193,6 +229,9 @@ const FlowManagement: React.FC = () => {
     if (total === 0) return 100
     return Math.round((successful / total) * 100)
   }
+
+  // Check if creating flows is allowed based on admin permissions and environment restrictions
+  const canCreateFlows = isAdmin() && (environment?.permissions?.canCreateFlows ?? true)
 
   if (!isAdmin) {
     return (
@@ -234,12 +273,36 @@ const FlowManagement: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button asChild className="btn-primary">
-            <Link to="/flows/create">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Flow
-            </Link>
-          </Button>
+          <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileImport}
+              className="hidden"
+              disabled={importFlowMutation.isPending}
+            />
+            <Button 
+              variant="outline" 
+              disabled={importFlowMutation.isPending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {importFlowMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              Import Flow
+            </Button>
+          </div>
+          {canCreateFlows && (
+            <Button asChild className="btn-primary">
+              <Link to="/flows/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Flow
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -527,14 +590,21 @@ const FlowManagement: React.FC = () => {
             <div className="text-center">
               <Workflow className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No Visual Flows</h3>
-              <p className="text-muted-foreground mb-6">Create your first visual integration flow using our drag-and-drop builder</p>
+              <p className="text-muted-foreground mb-6">
+                {canCreateFlows 
+                  ? "Create your first visual integration flow using our drag-and-drop builder"
+                  : "Import flows are available in this environment. Flow creation is restricted."
+                }
+              </p>
               <div className="flex items-center space-x-3 justify-center">
-                <Button asChild className="btn-primary">
-                  <Link to="/flows/create">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Flow
-                  </Link>
-                </Button>
+                {canCreateFlows && (
+                  <Button asChild className="btn-primary">
+                    <Link to="/flows/create">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Flow
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>

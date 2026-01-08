@@ -58,7 +58,7 @@ public class TransactionLog {
     }
 
     /**
-     * Initialize timestamps if null
+     * Initialize timestamps if null. Should only be called during INSERT operations.
      */
     public void initializeTimestamps() {
         if (timestamp == null) {
