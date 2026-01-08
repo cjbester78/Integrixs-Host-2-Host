@@ -86,32 +86,34 @@ public class SftpConnectionUtil {
     /**
      * Configure authentication based on the adapter configuration.
      * Supports password, private key, and dual authentication methods.
+     * Now handles both file-based keys and database-stored key content.
      */
     private static void configureAuthentication(JSch jsch, Session session, Map<String, Object> config) throws JSchException {
         String authType = (String) config.getOrDefault("authType", "PASSWORD");
+        String authenticationType = (String) config.getOrDefault("authenticationType", "USERNAME_PASSWORD");
         String password = (String) config.get("password");
         String privateKeyPath = (String) config.get("privateKeyPath");
         String privateKeyPassphrase = (String) config.get("privateKeyPassphrase");
         
-        logger.debug("Configuring authentication type: {}", authType);
+        // New: SSH key content from database
+        String privateKeyContent = (String) config.get("privateKeyContent");
+        String publicKeyContent = (String) config.get("publicKeyContent");
+        String keyType = (String) config.get("keyType");
         
-        switch (authType) {
+        // Use authenticationType if available (new format), otherwise fall back to authType
+        String effectiveAuthType = authenticationType != null ? authenticationType : authType;
+        
+        logger.debug("Configuring authentication type: {} (effective: {})", authType, effectiveAuthType);
+        
+        switch (effectiveAuthType) {
             case "SSH_KEY":
             case "PRIVATE_KEY":
                 // Private key authentication only
-                if (privateKeyPath != null && !privateKeyPath.trim().isEmpty()) {
-                    if (privateKeyPassphrase != null && !privateKeyPassphrase.trim().isEmpty()) {
-                        jsch.addIdentity(privateKeyPath, privateKeyPassphrase);
-                        logger.debug("Added private key with passphrase");
-                    } else {
-                        jsch.addIdentity(privateKeyPath);
-                        logger.debug("Added private key without passphrase");
-                    }
-                } else {
-                    throw new IllegalArgumentException("Private key path is required for SSH key authentication");
-                }
+                configureSshKeyAuthentication(jsch, privateKeyPath, privateKeyPassphrase, 
+                                            privateKeyContent, keyType);
                 break;
                 
+            case "USERNAME_PASSWORD":
             case "PASSWORD":
                 // Password-only authentication
                 if (password != null && !password.trim().isEmpty()) {
@@ -125,14 +127,13 @@ public class SftpConnectionUtil {
             case "DUAL":
                 // Dual authentication - both private key and password
                 boolean hasPrivateKey = false;
-                if (privateKeyPath != null && !privateKeyPath.trim().isEmpty()) {
-                    if (privateKeyPassphrase != null && !privateKeyPassphrase.trim().isEmpty()) {
-                        jsch.addIdentity(privateKeyPath, privateKeyPassphrase);
-                    } else {
-                        jsch.addIdentity(privateKeyPath);
-                    }
+                try {
+                    configureSshKeyAuthentication(jsch, privateKeyPath, privateKeyPassphrase, 
+                                                privateKeyContent, keyType);
                     hasPrivateKey = true;
                     logger.debug("Dual auth: private key configured");
+                } catch (Exception e) {
+                    logger.debug("Dual auth: private key configuration failed: {}", e.getMessage());
                 }
                 
                 if (password != null && !password.trim().isEmpty()) {
@@ -146,7 +147,44 @@ public class SftpConnectionUtil {
                 break;
                 
             default:
-                throw new IllegalArgumentException("Unsupported authentication type: " + authType);
+                throw new IllegalArgumentException("Unsupported authentication type: " + effectiveAuthType);
+        }
+    }
+    
+    /**
+     * Configure SSH key authentication using either file path or database content.
+     */
+    private static void configureSshKeyAuthentication(JSch jsch, String privateKeyPath, 
+                                                    String privateKeyPassphrase, 
+                                                    String privateKeyContent, 
+                                                    String keyType) throws JSchException {
+        
+        // Prefer database content over file path
+        if (privateKeyContent != null && !privateKeyContent.trim().isEmpty()) {
+            logger.debug("Using SSH key content from database (type: {})", keyType);
+            
+            // Add identity from memory content
+            if (privateKeyPassphrase != null && !privateKeyPassphrase.trim().isEmpty()) {
+                jsch.addIdentity("database-key", privateKeyContent.getBytes(), null, 
+                               privateKeyPassphrase.getBytes());
+                logger.debug("Added private key from database with passphrase");
+            } else {
+                jsch.addIdentity("database-key", privateKeyContent.getBytes(), null, null);
+                logger.debug("Added private key from database without passphrase");
+            }
+        } else if (privateKeyPath != null && !privateKeyPath.trim().isEmpty()) {
+            logger.debug("Using SSH key file from path: {}", privateKeyPath);
+            
+            // Add identity from file path
+            if (privateKeyPassphrase != null && !privateKeyPassphrase.trim().isEmpty()) {
+                jsch.addIdentity(privateKeyPath, privateKeyPassphrase);
+                logger.debug("Added private key from file with passphrase");
+            } else {
+                jsch.addIdentity(privateKeyPath);
+                logger.debug("Added private key from file without passphrase");
+            }
+        } else {
+            throw new IllegalArgumentException("Private key path or content is required for SSH key authentication");
         }
     }
     

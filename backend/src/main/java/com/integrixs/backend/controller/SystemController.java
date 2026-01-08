@@ -318,41 +318,4 @@ public class SystemController {
         }
     }
 
-    /**
-     * Test all configured bank connections.
-     */
-    @PostMapping("/test-all-connections")
-    public ResponseEntity<ApiResponse<AdminSystemResponse>> testAllConnections() {
-        
-        UUID currentUserId = getCurrentUserId();
-        
-        // Create immutable request DTO
-        AdminSystemRequest testRequest = AdminSystemRequest.builder()
-            .operation("connection_test")
-            .requestedBy(currentUserId)
-            .build();
-        
-        // Validate request
-        ExecutionValidationResult validation = validationService.validateSystemHealthRequest(Map.of());
-        if (!validation.isValid()) {
-            throw new IllegalArgumentException("Invalid connection test request: " + validation.getErrors());
-        }
-        
-        try {
-            Map<String, Object> results = systemService.testAllBankConnections();
-            
-            // Create response using builder pattern
-            AdminSystemResponse response = AdminSystemResponse.builder()
-                .operation("connection_test")
-                .status("SUCCESS")
-                .metrics(results)
-                .build();
-            
-            return responseService.success(response);
-            
-        } catch (Exception e) {
-            logger.error("Failed to test bank connections for user: {}", currentUserId, e);
-            throw new RuntimeException("Failed to test bank connections", e);
-        }
-    }
 }

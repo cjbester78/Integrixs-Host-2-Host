@@ -866,7 +866,7 @@ public class FlowExecutionService {
             logger.info("Executing intermediate adapter: {} ({})", adapter.getName(), adapterId);
             
             // Execute real adapter operation using AdapterExecutionService
-            Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(adapterId, context, step);
+            Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(adapter, context, step);
             
             // Add intermediate adapter metadata
             adapterResult.put("adapterType", "intermediate");
@@ -1104,7 +1104,7 @@ public class FlowExecutionService {
                             messageContext.put("messageEventType", eventType);
                             messageContext.put("messagePayload", messagePayload);
                             
-                            Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(receiverAdapterId, messageContext, step);
+                            Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(adapter, messageContext, step);
                             messageResult.putAll(adapterResult);
                         }
                     }

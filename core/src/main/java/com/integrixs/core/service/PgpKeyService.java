@@ -9,6 +9,16 @@ import org.bouncycastle.bcpg.sig.Features;
 import org.bouncycastle.bcpg.sig.KeyFlags;
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
+import org.bouncycastle.crypto.generators.ECKeyPairGenerator;
+import org.bouncycastle.crypto.generators.DSAKeyPairGenerator;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.bouncycastle.crypto.params.ECKeyGenerationParameters;
+import org.bouncycastle.crypto.params.DSAKeyGenerationParameters;
+import org.bouncycastle.crypto.params.DSAParameters;
+import org.bouncycastle.crypto.generators.DSAParametersGenerator;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.asn1.x9.ECNamedCurveTable;
+import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
@@ -58,7 +68,7 @@ public class PgpKeyService {
             logger.info("Generating PGP key pair: {} for user: {}", keyName, userId);
             
             // Validate input
-            validateKeyGeneration(keyName, userId, keySize);
+            validateKeyGeneration(keyName, userId, keyType, keySize);
             
             // Generate key pair based on type
             PGPKeyPair keyPair;
@@ -67,9 +77,11 @@ public class PgpKeyService {
                     keyPair = generateRSAKeyPair(keySize);
                     break;
                 case ECC:
-                    throw new UnsupportedOperationException("ECC key generation not yet implemented");
+                    keyPair = generateECCKeyPair(keySize);
+                    break;
                 case DSA:
-                    throw new UnsupportedOperationException("DSA key generation not yet implemented");
+                    keyPair = generateDSAKeyPair(keySize);
+                    break;
                 default:
                     throw new IllegalArgumentException("Unsupported key type: " + keyType);
             }
@@ -279,15 +291,33 @@ public class PgpKeyService {
     
     // Private helper methods
     
-    private void validateKeyGeneration(String keyName, String userId, int keySize) {
+    private void validateKeyGeneration(String keyName, String userId, PgpKey.KeyType keyType, int keySize) {
         if (keyName == null || keyName.trim().isEmpty()) {
             throw new IllegalArgumentException("Key name is required");
         }
         if (userId == null || userId.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID is required");
         }
-        if (keySize < 1024 || keySize > 4096) {
-            throw new IllegalArgumentException("Key size must be between 1024 and 4096 bits");
+        
+        // Validate key size based on key type
+        switch (keyType) {
+            case RSA:
+                if (keySize < 1024 || keySize > 4096) {
+                    throw new IllegalArgumentException("RSA key size must be between 1024 and 4096 bits");
+                }
+                break;
+            case ECC:
+                if (keySize != 256 && keySize != 384 && keySize != 521) {
+                    throw new IllegalArgumentException("ECC key size must be 256, 384, or 521 bits");
+                }
+                break;
+            case DSA:
+                if (keySize < 1024 || keySize > 3072 || keySize % 64 != 0) {
+                    throw new IllegalArgumentException("DSA key size must be between 1024-3072 bits and multiple of 64");
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported key type: " + keyType);
         }
         
         // Check if key name already exists
@@ -307,6 +337,75 @@ public class PgpKeyService {
         ));
         
         return new BcPGPKeyPair(PGPPublicKey.RSA_GENERAL, generator.generateKeyPair(), new Date());
+    }
+    
+    /**
+     * Generate ECC key pair using NIST P-256, P-384, or P-521 curves based on key size
+     */
+    private PGPKeyPair generateECCKeyPair(int keySize) throws Exception {
+        logger.debug("Generating ECC key pair with size: {}", keySize);
+        
+        // Select curve based on key size
+        String curveName;
+        switch (keySize) {
+            case 256:
+                curveName = "secp256r1"; // NIST P-256
+                break;
+            case 384:
+                curveName = "secp384r1"; // NIST P-384
+                break;
+            case 521:
+                curveName = "secp521r1"; // NIST P-521
+                break;
+            default:
+                logger.warn("Unsupported ECC key size {}, defaulting to 256 bits", keySize);
+                curveName = "secp256r1";
+                break;
+        }
+        
+        // Get curve parameters
+        X9ECParameters ecParameters = ECNamedCurveTable.getByName(curveName);
+        if (ecParameters == null) {
+            throw new IllegalArgumentException("Unsupported ECC curve: " + curveName);
+        }
+        
+        ECDomainParameters domainParameters = new ECDomainParameters(
+            ecParameters.getCurve(),
+            ecParameters.getG(),
+            ecParameters.getN(),
+            ecParameters.getH()
+        );
+        
+        // Generate key pair
+        ECKeyPairGenerator generator = new ECKeyPairGenerator();
+        generator.init(new ECKeyGenerationParameters(domainParameters, secureRandom));
+        
+        logger.info("Generated ECC key pair using curve: {} ({} bits)", curveName, keySize);
+        return new BcPGPKeyPair(PGPPublicKey.ECDSA, generator.generateKeyPair(), new Date());
+    }
+    
+    /**
+     * Generate DSA key pair with specified key size
+     */
+    private PGPKeyPair generateDSAKeyPair(int keySize) throws Exception {
+        logger.debug("Generating DSA key pair with size: {}", keySize);
+        
+        // Validate DSA key size (must be multiple of 64, between 1024 and 3072)
+        if (keySize < 1024 || keySize > 3072 || keySize % 64 != 0) {
+            throw new IllegalArgumentException("DSA key size must be between 1024-3072 bits and multiple of 64");
+        }
+        
+        // Generate DSA parameters
+        DSAParametersGenerator paramGen = new DSAParametersGenerator();
+        paramGen.init(keySize, 80, secureRandom);
+        DSAParameters dsaParams = paramGen.generateParameters();
+        
+        // Generate DSA key pair
+        DSAKeyPairGenerator generator = new DSAKeyPairGenerator();
+        generator.init(new DSAKeyGenerationParameters(secureRandom, dsaParams));
+        
+        logger.info("Generated DSA key pair with {} bits", keySize);
+        return new BcPGPKeyPair(PGPPublicKey.DSA, generator.generateKeyPair(), new Date());
     }
     
     private PGPKeyRingGenerator createKeyRingGenerator(PGPKeyPair keyPair, String userId, String passphrase) throws Exception {

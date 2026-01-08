@@ -133,7 +133,7 @@ public class MessageEndNodeCommand extends AbstractStepExecutionCommand {
         messageContext.put("messagePayload", messagePayload);
         
         Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(
-            receiverAdapterId, messageContext, step);
+            adapter, messageContext, step);
         messageResult.putAll(adapterResult);
     }
 }

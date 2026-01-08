@@ -1,7 +1,7 @@
 package com.integrixs.backend.config;
 
 import com.integrixs.core.logging.EnhancedLogger;
-import com.integrixs.core.sftp.SftpOperationException;
+import com.integrixs.adapters.sftp.SftpOperationException;
 import com.integrixs.shared.dto.BankOperationResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

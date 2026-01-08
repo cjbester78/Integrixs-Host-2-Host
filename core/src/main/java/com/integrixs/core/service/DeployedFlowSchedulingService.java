@@ -312,7 +312,7 @@ public class DeployedFlowSchedulingService {
             adapterContext.put("flowId", flowId);
             
             Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(
-                senderAdapter.getId(), adapterContext, null);
+                senderAdapter, adapterContext, null);
             
             // Check if adapter found files/data to process
             Boolean hasData = (Boolean) adapterResult.getOrDefault("hasData", false);

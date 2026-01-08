@@ -20,10 +20,6 @@ public final class H2HConstants {
     // Configuration Files
     public static final String APP_CONFIG_FILE = "app.config.properties";
     
-    // Bank Names
-    public static final String BANK_FNB = "FNB";
-    public static final String BANK_STANBIC = "Stanbic";
-    
     // Operation Types
     public static final String OPERATION_UPLOAD = "upload";
     public static final String OPERATION_DOWNLOAD = "download";

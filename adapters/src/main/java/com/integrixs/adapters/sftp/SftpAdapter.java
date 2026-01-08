@@ -2,6 +2,7 @@ package com.integrixs.adapters.sftp;
 
 import com.integrixs.shared.model.Adapter;
 import com.integrixs.shared.model.SshKey;
+import org.springframework.stereotype.Component;
 import com.jcraft.jsch.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -506,41 +506,6 @@ public class SystemService {
         return result;
     }
 
-    /**
-     * Test all bank connections
-     */
-    public Map<String, Object> testAllBankConnections() {
-        Map<String, Object> results = new HashMap<>();
-        
-        try {
-            // TODO: Re-enable when BankOperationService is implemented
-            // List<String> banks = bankOperationService.getSupportedBanks();
-            List<String> banks = Arrays.asList("FNB", "Stanbic"); // Temporary hardcoded list
-            Map<String, String> bankResults = new HashMap<>();
-            
-            for (String bank : banks) {
-                try {
-                    // Test payment upload connection (most common configuration)
-                    // String testResult = bankOperationService.testConnection(bank, "payment").get();
-                    String testResult = "Connection testing temporarily disabled";
-                    bankResults.put(bank, "PENDING: " + testResult);
-                } catch (Exception e) {
-                    bankResults.put(bank, "FAILED: " + e.getMessage());
-                }
-            }
-            
-            results.put("success", true);
-            results.put("bankResults", bankResults);
-            results.put("testTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            
-        } catch (Exception e) {
-            logger.error("Failed to test bank connections: {}", e.getMessage(), e);
-            results.put("success", false);
-            results.put("error", e.getMessage());
-        }
-        
-        return results;
-    }
 
     private boolean checkConfigurationHealth() {
         try {

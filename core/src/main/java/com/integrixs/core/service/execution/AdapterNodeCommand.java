@@ -81,7 +81,7 @@ public class AdapterNodeCommand extends AbstractStepExecutionCommand {
         
         // Execute real adapter operation using AdapterExecutionService
         Map<String, Object> adapterResult = adapterExecutionService.executeAdapter(
-            adapterId, executionContext, step);
+            adapter, executionContext, step);
         
         // Add intermediate adapter metadata
         adapterResult.put("adapterType", "intermediate");

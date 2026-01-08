@@ -1,6 +1,7 @@
 package com.integrixs.adapters.email;
 
 import com.integrixs.shared.model.Adapter;
+import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.mail.*;

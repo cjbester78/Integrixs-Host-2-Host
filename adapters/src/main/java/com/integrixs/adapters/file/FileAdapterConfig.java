@@ -257,7 +257,7 @@ public class FileAdapterConfig {
     }
     
     public String getPostProcessing() {
-        return getProcessingMode(); // Map to processing mode
+        return getString("postProcessing", getProcessingMode()); // Read postProcessing field, fallback to processingMode for backward compatibility
     }
     
     public String getArchiveDirectory() {
