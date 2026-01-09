@@ -799,8 +799,6 @@ public class UtilityExecutionService {
         
         int filesExtracted = 0;
         long bytesExtracted = 0;
-        Path extractDir = Paths.get(outputDir);
-        Files.createDirectories(extractDir);
         
         List<Map<String, Object>> extractedFiles = new ArrayList<>();
         
@@ -821,13 +819,9 @@ public class UtilityExecutionService {
                 }
                 
                 if (matchesPattern(entryName, pattern)) {
-                    Path outputPath = preserveStructure ? 
-                        extractDir.resolve(entryName) : 
-                        extractDir.resolve(Paths.get(entryName).getFileName());
+                    String fileName = preserveStructure ? entryName : Paths.get(entryName).getFileName().toString();
                     
-                    Files.createDirectories(outputPath.getParent());
-                    
-                    // Read entry content into memory
+                    // Read entry content into memory ONLY - no disk writes
                     ByteArrayOutputStream entryBytes = new ByteArrayOutputStream();
                     byte[] buffer = new byte[8192];
                     int bytesRead;
@@ -837,13 +831,10 @@ public class UtilityExecutionService {
                     
                     byte[] extractedContent = entryBytes.toByteArray();
                     
-                    // Write to file
-                    Files.write(outputPath, extractedContent);
-                    
-                    // Create file data object for next step in flow
+                    // Create file data object for next step in flow - keep in memory only
                     Map<String, Object> extractedFileData = new HashMap<>();
-                    extractedFileData.put("fileName", outputPath.getFileName().toString());
-                    extractedFileData.put("originalFilePath", outputPath.toString());
+                    extractedFileData.put("fileName", fileName);
+                    extractedFileData.put("originalFilePath", "memory://" + fileName);
                     extractedFileData.put("fileSize", extractedContent.length);
                     extractedFileData.put("fileContent", extractedContent);
                     extractedFileData.put("status", "EXTRACTED_SUCCESS");

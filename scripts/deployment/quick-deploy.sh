@@ -56,17 +56,17 @@ if lsof -Pi :8080 -sTCP:LISTEN -t > /dev/null 2>&1; then
     sleep 2
 fi
 
-# Build frontend
-print_status "Building React frontend..."
-cd "$PROJECT_ROOT/frontend"
+# Clean backend static directory first
+print_status "Cleaning backend static directory..."
+BACKEND_STATIC="$PROJECT_ROOT/backend/src/main/resources/static"
+mkdir -p "$BACKEND_STATIC"
+rm -rf "$BACKEND_STATIC"/*
+print_success "Backend static directory cleaned"
 
-if [ ! -d "node_modules" ]; then
-    print_status "Installing frontend dependencies..."
-    npm install
-fi
-
-print_status "Building frontend production bundle..."
-npm run build
+# Build frontend with Maven
+print_status "Building frontend..."
+cd "$PROJECT_ROOT"
+mvn clean compile -pl frontend
 
 if [ $? -eq 0 ]; then
     print_success "Frontend build completed"
@@ -75,49 +75,14 @@ else
     exit 1
 fi
 
-# Sync frontend to backend resources efficiently
-print_status "Syncing frontend to backend resources..."
-BACKEND_STATIC="$PROJECT_ROOT/backend/src/main/resources/static"
-mkdir -p "$BACKEND_STATIC"
+# Copy frontend files to backend static
+print_status "Copying frontend files to backend..."
+cp -r "$PROJECT_ROOT/frontend/dist/"* "$BACKEND_STATIC/"
+print_success "Frontend files copied to backend"
 
-# Use rsync for efficient sync (only copies changed files)
-if command -v rsync >/dev/null 2>&1; then
-    print_status "Using rsync for efficient file sync..."
-    rsync -av --delete dist/ "$BACKEND_STATIC/"
-    print_success "Frontend files synced efficiently with rsync"
-else
-    # Fallback: Check if we need to copy at all
-    print_status "rsync not available, checking for changes..."
-    NEED_COPY=false
-    
-    # Check if backend static directory is empty or missing files
-    if [ ! "$(ls -A "$BACKEND_STATIC" 2>/dev/null)" ]; then
-        print_status "Backend static directory empty, copying all files..."
-        NEED_COPY=true
-    else
-        # Check if any dist files are newer than backend static files
-        if [ "dist" -nt "$BACKEND_STATIC" ] || [ ! -f "$BACKEND_STATIC/index.html" ]; then
-            print_status "Frontend files are newer, updating backend static..."
-            NEED_COPY=true
-        else
-            print_status "Frontend files are up to date, skipping copy..."
-        fi
-    fi
-    
-    if [ "$NEED_COPY" = true ]; then
-        # Only remove and copy if needed
-        rm -rf "$BACKEND_STATIC"/*
-        cp -r dist/* "$BACKEND_STATIC/"
-        print_success "Frontend files copied to backend"
-    else
-        print_success "Frontend files already up to date"
-    fi
-fi
-
-# Build backend
+# Build backend application (skip frontend since we already built it)
 print_status "Building backend application..."
-cd "$PROJECT_ROOT"
-mvn clean compile
+mvn compile -pl \!frontend
 
 if [ $? -eq 0 ]; then
     print_success "Backend compilation completed"
@@ -126,14 +91,14 @@ else
     exit 1
 fi
 
-# Package backend JAR
-print_status "Packaging backend JAR..."
-mvn package -DskipTests
+# Package application JAR (skip frontend since we already built it)
+print_status "Packaging application JAR..."
+mvn package -DskipTests -pl \!frontend
 
 if [ $? -eq 0 ]; then
-    print_success "Backend packaging completed"
+    print_success "Application packaging completed"
 else
-    print_error "Backend packaging failed"
+    print_error "Application packaging failed"
     exit 1
 fi
 

@@ -214,19 +214,17 @@ const AdapterConfiguration: React.FC = () => {
 
   if (adapterLoading) {
     return (
-      <div className="content-spacing">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-muted-foreground">Loading adapter configuration...</span>
-          </div>
+      <div className="h-full flex items-center justify-center">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground">Loading adapter configuration...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="content-spacing">
+    <div className="content-spacing" style={{contain: 'layout style paint'}}>
       <div className="flex items-center space-x-4 mb-6">
         <Button variant="outline" size="sm" onClick={() => navigate('/adapters')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -245,7 +243,7 @@ const AdapterConfiguration: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" style={{contain: 'layout'}}>
         {/* Basic Information */}
         <Card className="app-card border">
           <CardHeader>
@@ -462,7 +460,7 @@ const AdapterConfiguration: React.FC = () => {
             Cancel
           </Button>
         </div>
-      </form>
+        </form>
     </div>
   )
 }
