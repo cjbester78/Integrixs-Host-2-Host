@@ -122,15 +122,31 @@ public class ConfigurationValidationService {
     private ConfigurationValidationResult validateStringValue(SystemConfiguration config, String value, 
                                                             List<String> warnings) {
         String sanitizedValue = sanitizeStringValue(value);
+        List<String> errors = new ArrayList<>();
         
         // Check for security patterns
         if (containsSuspiciousContent(sanitizedValue)) {
             warnings.add("Value contains potentially unsafe content");
         }
         
-        // Note: Pattern validation not implemented in current SystemConfiguration model
+        // Implement pattern validation for known configuration keys
+        String key = config.getConfigKey();
+        String validationPattern = getValidationPattern(key);
+        if (validationPattern != null && !validationPattern.isEmpty()) {
+            try {
+                Pattern pattern = Pattern.compile(validationPattern);
+                if (!pattern.matcher(sanitizedValue).matches()) {
+                    errors.add("Value does not match required pattern: " + getPatternDescription(key));
+                }
+            } catch (Exception e) {
+                logger.warn("Invalid validation pattern for key {}: {}", key, validationPattern);
+                warnings.add("Pattern validation failed - invalid regex");
+            }
+        }
         
-        if (warnings.isEmpty()) {
+        if (!errors.isEmpty()) {
+            return ConfigurationValidationResult.failure(errors);
+        } else if (warnings.isEmpty()) {
             return ConfigurationValidationResult.success(sanitizedValue, SystemConfiguration.ConfigType.STRING);
         } else {
             return ConfigurationValidationResult.successWithWarnings(sanitizedValue, 
@@ -346,6 +362,169 @@ public class ConfigurationValidationService {
         } catch (Exception e) {
             logger.warn("Error reading min-timeout-seconds configuration, using default: {}", e.getMessage());
             return 1L;
+        }
+    }
+    
+    /**
+     * Get validation pattern for a configuration key
+     */
+    private String getValidationPattern(String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Define patterns for common configuration keys
+        switch (key.toLowerCase().trim()) {
+            case "email":
+            case "admin.email":
+            case "notification.email":
+            case "mail.username":
+                return "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+            case "host":
+            case "hostname":
+            case "database.host":
+            case "smtp.host":
+            case "sftp.host":
+                return "^[a-zA-Z0-9.-]+$";
+            case "port":
+            case "database.port":
+            case "smtp.port":
+            case "sftp.port":
+                return "^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$";
+            case "url":
+            case "base.url":
+            case "api.url":
+            case "service.url":
+                return "^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/.*)?$";
+            case "username":
+            case "database.username":
+            case "sftp.username":
+            case "user":
+                return "^[a-zA-Z0-9_.-]{1,64}$";
+            case "password":
+            case "database.password":
+            case "sftp.password":
+                // Password should be at least 8 characters, contain letters and numbers
+                return "^(?=.*[a-zA-Z])(?=.*[0-9]).{8,}$";
+            case "timeout":
+            case "connection.timeout":
+            case "read.timeout":
+            case "execution.timeout":
+                return "^[1-9][0-9]{0,8}$"; // 1 to 999999999 (positive numbers only)
+            case "max.connections":
+            case "max.pool.size":
+            case "max.file.size":
+                return "^[1-9][0-9]*$"; // Positive integers only
+            case "log.level":
+            case "logging.level":
+                return "^(TRACE|DEBUG|INFO|WARN|ERROR|FATAL|OFF)$";
+            case "enabled":
+            case "active":
+            case "ssl.enabled":
+            case "debug.enabled":
+            case "compression.enabled":
+                return "^(true|false)$";
+            case "file.pattern":
+            case "filename.pattern":
+                // Basic filename pattern validation (no path separators or dangerous chars)
+                return "^[a-zA-Z0-9._*?-]+$";
+            case "directory":
+            case "base.directory":
+            case "temp.directory":
+            case "archive.directory":
+                // Directory path pattern (Unix/Windows compatible)
+                return "^([a-zA-Z]:|/)?([/\\\\]?[a-zA-Z0-9._-]+)*[/\\\\]?$";
+            case "encryption.key":
+            case "api.key":
+                // API key format: alphanumeric, minimum length
+                return "^[a-zA-Z0-9]{16,}$";
+            case "ip.address":
+            case "server.ip":
+                // IPv4 address pattern
+                return "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
+            case "cron.expression":
+                // Basic cron expression validation (simplified)
+                return "^(\\*|[0-5]?[0-9]|\\*/[0-9]+)\\s+(\\*|[01]?[0-9]|2[0-3]|\\*/[0-9]+)\\s+(\\*|[0-2]?[0-9]|3[01]|\\*/[0-9]+)\\s+(\\*|[0-9]|1[0-2]|\\*/[0-9]+)\\s+(\\*|[0-6]|\\*/[0-9]+)$";
+            default:
+                return null; // No specific pattern
+        }
+    }
+    
+    /**
+     * Get human-readable description of validation pattern
+     */
+    private String getPatternDescription(String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return "required format";
+        }
+        
+        switch (key.toLowerCase().trim()) {
+            case "email":
+            case "admin.email":
+            case "notification.email":
+            case "mail.username":
+                return "valid email address format (user@domain.com)";
+            case "host":
+            case "hostname":
+            case "database.host":
+            case "smtp.host":
+            case "sftp.host":
+                return "valid hostname (alphanumeric, dots, hyphens)";
+            case "port":
+            case "database.port":
+            case "smtp.port":
+            case "sftp.port":
+                return "valid port number (1-65535)";
+            case "url":
+            case "base.url":
+            case "api.url":
+            case "service.url":
+                return "valid HTTP/HTTPS URL format";
+            case "username":
+            case "database.username":
+            case "sftp.username":
+            case "user":
+                return "valid username (alphanumeric, underscore, dot, hyphen, max 64 chars)";
+            case "password":
+            case "database.password":
+            case "sftp.password":
+                return "strong password (min 8 chars, letters and numbers required)";
+            case "timeout":
+            case "connection.timeout":
+            case "read.timeout":
+            case "execution.timeout":
+                return "positive integer in milliseconds (1-999999999)";
+            case "max.connections":
+            case "max.pool.size":
+            case "max.file.size":
+                return "positive integer greater than 0";
+            case "log.level":
+            case "logging.level":
+                return "valid log level (TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF)";
+            case "enabled":
+            case "active":
+            case "ssl.enabled":
+            case "debug.enabled":
+            case "compression.enabled":
+                return "boolean value (true or false)";
+            case "file.pattern":
+            case "filename.pattern":
+                return "valid filename pattern (letters, numbers, dots, wildcards, no path separators)";
+            case "directory":
+            case "base.directory":
+            case "temp.directory":
+            case "archive.directory":
+                return "valid directory path (Unix/Windows compatible)";
+            case "encryption.key":
+            case "api.key":
+                return "alphanumeric key (minimum 16 characters)";
+            case "ip.address":
+            case "server.ip":
+                return "valid IPv4 address (xxx.xxx.xxx.xxx)";
+            case "cron.expression":
+                return "valid cron expression (minute hour day month dayofweek)";
+            default:
+                return "required format";
         }
     }
 }

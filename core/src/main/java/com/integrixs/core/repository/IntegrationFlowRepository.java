@@ -18,6 +18,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,12 +45,13 @@ public class IntegrationFlowRepository {
      */
     public List<IntegrationFlow> findAll() {
         String sql = """
-            SELECT id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
-            FROM integration_flows 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
             ORDER BY created_at DESC
         """;
         
@@ -61,12 +63,13 @@ public class IntegrationFlowRepository {
      */
     public List<IntegrationFlow> findByActive(boolean active) {
         String sql = """
-            SELECT id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
-            FROM integration_flows 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
             WHERE active = ?
             ORDER BY name ASC
         """;
@@ -79,12 +82,13 @@ public class IntegrationFlowRepository {
      */
     public List<IntegrationFlow> findScheduledFlows() {
         String sql = """
-            SELECT id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, created_at, updated_at, created_by, updated_by
-            FROM integration_flows 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
             WHERE active = true AND schedule_enabled = true
             ORDER BY next_scheduled_run ASC
         """;
@@ -97,12 +101,13 @@ public class IntegrationFlowRepository {
      */
     public Optional<IntegrationFlow> findById(UUID id) {
         String sql = """
-            SELECT id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
-            FROM integration_flows 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
             WHERE id = ?
         """;
         
@@ -119,12 +124,13 @@ public class IntegrationFlowRepository {
      */
     public Optional<IntegrationFlow> findByName(String name) {
         String sql = """
-            SELECT id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
                    max_parallel_executions, timeout_minutes, retry_policy,
                    total_executions, successful_executions, failed_executions, 
                    average_execution_time_ms, schedule_enabled, schedule_cron, 
-                   next_scheduled_run, active, original_flow_id, created_at, updated_at, created_by, updated_by
-            FROM integration_flows 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
             WHERE name = ?
         """;
         
@@ -140,7 +146,7 @@ public class IntegrationFlowRepository {
      * Check if flow exists by name
      */
     public boolean existsByName(String name) {
-        String sql = "SELECT COUNT(*) FROM integration_flows WHERE name = ?";
+        String sql = "SELECT COUNT(*) FROM package_flows WHERE name = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name);
         return count != null && count > 0;
     }
@@ -149,9 +155,32 @@ public class IntegrationFlowRepository {
      * Check if flow has been imported by original flow ID
      */
     public boolean existsByOriginalFlowId(UUID originalFlowId) {
-        String sql = "SELECT COUNT(*) FROM integration_flows WHERE original_flow_id = ?";
+        String sql = "SELECT COUNT(*) FROM package_flows WHERE original_flow_id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, originalFlowId);
         return count != null && count > 0;
+    }
+
+    /**
+     * Find flow by original flow ID (for re-import/update scenarios)
+     */
+    public Optional<IntegrationFlow> findByOriginalFlowId(UUID originalFlowId) {
+        String sql = """
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
+                   max_parallel_executions, timeout_minutes, retry_policy,
+                   total_executions, successful_executions, failed_executions,
+                   average_execution_time_ms, schedule_enabled, schedule_cron,
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows
+            WHERE original_flow_id = ?
+        """;
+
+        try {
+            IntegrationFlow flow = jdbcTemplate.queryForObject(sql, this::mapIntegrationFlow, originalFlowId);
+            return Optional.of(flow);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
     
     /**
@@ -167,13 +196,14 @@ public class IntegrationFlowRepository {
         // Don't set updated_at for new records
         
         String sql = """
-            INSERT INTO integration_flows (
-                id, name, description, bank_name, flow_definition, flow_version, flow_type,
+            INSERT INTO package_flows (
+                id, name, description, flow_definition, flow_version, flow_type,
                 max_parallel_executions, timeout_minutes, retry_policy,
-                total_executions, successful_executions, failed_executions, 
-                average_execution_time_ms, schedule_enabled, schedule_cron, 
-                next_scheduled_run, active, original_flow_id, created_at, created_by
-            ) VALUES (?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                total_executions, successful_executions, failed_executions,
+                average_execution_time_ms, schedule_enabled, schedule_cron,
+                next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id,
+                created_at, created_by
+            ) VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
         String createdByStr = AuditUtils.getCurrentUserId();
@@ -193,7 +223,6 @@ public class IntegrationFlowRepository {
             flow.getId(),
             flow.getName(),
             flow.getDescription(),
-            flow.getBankName(),
             convertMapToJson(flow.getFlowDefinition()),
             flow.getFlowVersion(),
             flow.getFlowType(),
@@ -208,13 +237,15 @@ public class IntegrationFlowRepository {
             flow.getScheduleCron(),
             flow.getNextScheduledRun(),
             flow.getActive(),
+            flow.getPackageId(),
+            flow.getDeployedFromPackageId(),
             flow.getOriginalFlowId(),
             flow.getCreatedAt(),
             createdBy
         );
         
         // Log audit trail for flow creation
-        auditService.logDatabaseOperation("INSERT", "integration_flows", flow.getId(), 
+        auditService.logDatabaseOperation("INSERT", "package_flows", flow.getId(), 
             flow.getName(), true, null);
         
         return flow.getId();
@@ -239,19 +270,19 @@ public class IntegrationFlowRepository {
         }
         
         String sql = """
-            UPDATE integration_flows SET
-                name = ?, description = ?, bank_name = ?, flow_definition = ?::jsonb, flow_version = ?,
+            UPDATE package_flows SET
+                name = ?, description = ?, flow_definition = ?::jsonb, flow_version = ?,
                 flow_type = ?, max_parallel_executions = ?, timeout_minutes = ?,
                 retry_policy = ?::jsonb, total_executions = ?, successful_executions = ?,
                 failed_executions = ?, average_execution_time_ms = ?, schedule_enabled = ?,
-                schedule_cron = ?, next_scheduled_run = ?, active = ?, updated_at = ?, updated_by = ?
+                schedule_cron = ?, next_scheduled_run = ?, active = ?, package_id = ?,
+                deployed_from_package_id = ?, updated_at = ?, updated_by = ?
             WHERE id = ?
         """;
-        
+
         jdbcTemplate.update(sql,
             flow.getName(),
             flow.getDescription(),
-            flow.getBankName(),
             convertMapToJson(flow.getFlowDefinition()),
             flow.getFlowVersion(),
             flow.getFlowType(),
@@ -266,24 +297,147 @@ public class IntegrationFlowRepository {
             flow.getScheduleCron(),
             flow.getNextScheduledRun(),
             flow.getActive(),
+            flow.getPackageId(),
+            flow.getDeployedFromPackageId(),
             flow.getUpdatedAt(),
             updatedBy,
             flow.getId()
         );
     }
-    
+
+    /**
+     * Save flow during import (includes original_flow_id)
+     */
+    public UUID importSave(IntegrationFlow flow, UUID originalFlowId) {
+        if (flow.getId() == null) {
+            flow.setId(UUID.randomUUID());
+        }
+
+        // Set audit fields for INSERT
+        flow.setCreatedAt(LocalDateTime.now());
+        flow.setOriginalFlowId(originalFlowId);
+
+        String sql = """
+            INSERT INTO package_flows (
+                id, name, description, flow_definition, flow_version, flow_type,
+                max_parallel_executions, timeout_minutes, retry_policy,
+                total_executions, successful_executions, failed_executions,
+                average_execution_time_ms, schedule_enabled, schedule_cron,
+                next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id,
+                created_at, created_by
+            ) VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+
+        String createdByStr = AuditUtils.getCurrentUserId();
+        UUID createdBy;
+        try {
+            createdBy = UUID.fromString(createdByStr);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid user ID for audit trail: " + createdByStr);
+        }
+
+        jdbcTemplate.update(sql,
+            flow.getId(),
+            flow.getName(),
+            flow.getDescription(),
+            convertMapToJson(flow.getFlowDefinition()),
+            flow.getFlowVersion(),
+            flow.getFlowType(),
+            flow.getMaxParallelExecutions(),
+            flow.getTimeoutMinutes(),
+            convertMapToJson(flow.getRetryPolicy()),
+            flow.getTotalExecutions(),
+            flow.getSuccessfulExecutions(),
+            flow.getFailedExecutions(),
+            flow.getAverageExecutionTimeMs(),
+            flow.getScheduleEnabled(),
+            flow.getScheduleCron(),
+            flow.getNextScheduledRun(),
+            flow.getActive(),
+            flow.getPackageId(),
+            flow.getDeployedFromPackageId(),
+            flow.getOriginalFlowId(),
+            flow.getCreatedAt(),
+            createdBy
+        );
+
+        // Log audit trail for flow creation
+        auditService.logDatabaseOperation("INSERT", "package_flows", flow.getId(),
+            flow.getName() + " (imported)", true, null);
+
+        return flow.getId();
+    }
+
+    /**
+     * Update flow during import (includes original_flow_id)
+     */
+    public void importUpdate(IntegrationFlow flow, UUID originalFlowId) {
+        flow.setUpdatedAt(LocalDateTime.now());
+        flow.setOriginalFlowId(originalFlowId);
+
+        String updatedByStr = AuditUtils.getCurrentUserId();
+        UUID updatedBy;
+        try {
+            updatedBy = UUID.fromString(updatedByStr);
+        } catch (IllegalArgumentException e) {
+            if (flow.getUpdatedBy() != null) {
+                updatedBy = flow.getUpdatedBy();
+            } else {
+                throw new RuntimeException("Unable to determine valid user ID for audit trail: " + updatedByStr);
+            }
+        }
+
+        String sql = """
+            UPDATE package_flows SET
+                name = ?, description = ?, flow_definition = ?::jsonb, flow_version = ?,
+                flow_type = ?, max_parallel_executions = ?, timeout_minutes = ?,
+                retry_policy = ?::jsonb, total_executions = ?, successful_executions = ?,
+                failed_executions = ?, average_execution_time_ms = ?, schedule_enabled = ?,
+                schedule_cron = ?, next_scheduled_run = ?, active = ?, package_id = ?,
+                deployed_from_package_id = ?, original_flow_id = ?, updated_at = ?, updated_by = ?
+            WHERE id = ?
+        """;
+
+        jdbcTemplate.update(sql,
+            flow.getName(),
+            flow.getDescription(),
+            convertMapToJson(flow.getFlowDefinition()),
+            flow.getFlowVersion(),
+            flow.getFlowType(),
+            flow.getMaxParallelExecutions(),
+            flow.getTimeoutMinutes(),
+            convertMapToJson(flow.getRetryPolicy()),
+            flow.getTotalExecutions(),
+            flow.getSuccessfulExecutions(),
+            flow.getFailedExecutions(),
+            flow.getAverageExecutionTimeMs(),
+            flow.getScheduleEnabled(),
+            flow.getScheduleCron(),
+            flow.getNextScheduledRun(),
+            flow.getActive(),
+            flow.getPackageId(),
+            flow.getDeployedFromPackageId(),
+            flow.getOriginalFlowId(),
+            flow.getUpdatedAt(),
+            updatedBy,
+            flow.getId()
+        );
+    }
+
     /**
      * Set flow enabled/disabled
      */
     public void setActive(UUID id, boolean active) {
         String sql = """
-            UPDATE integration_flows SET
+            UPDATE package_flows SET
                 active = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, active, LocalDateTime.now(), id);
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, active, LocalDateTime.now(), updatedBy, id);
     }
     
     /**
@@ -294,11 +448,11 @@ public class IntegrationFlowRepository {
         Optional<IntegrationFlow> flowOpt = findById(id);
         String flowName = flowOpt.map(IntegrationFlow::getName).orElse("unknown");
         
-        String sql = "DELETE FROM integration_flows WHERE id = ?";
+        String sql = "DELETE FROM package_flows WHERE id = ?";
         int rowsAffected = jdbcTemplate.update(sql, id);
         
         // Log audit trail for flow deletion
-        auditService.logDatabaseOperation("DELETE", "integration_flows", id, 
+        auditService.logDatabaseOperation("DELETE", "package_flows", id, 
             flowName, rowsAffected > 0, rowsAffected == 0 ? "Flow not found" : null);
         
         return rowsAffected > 0;
@@ -317,10 +471,156 @@ public class IntegrationFlowRepository {
                 SUM(successful_executions) as total_successes,
                 SUM(failed_executions) as total_failures,
                 AVG(average_execution_time_ms) as avg_execution_time
-            FROM integration_flows
+            FROM package_flows
         """;
         
         return jdbcTemplate.queryForMap(sql);
+    }
+    
+    /**
+     * Find flows by package ID.
+     * 
+     * @param packageId Package UUID to find flows for
+     * @return List of flows in the package
+     */
+    public List<IntegrationFlow> findByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = """
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
+                   max_parallel_executions, timeout_minutes, retry_policy,
+                   total_executions, successful_executions, failed_executions, 
+                   average_execution_time_ms, schedule_enabled, schedule_cron, 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
+            WHERE package_id = ?
+            ORDER BY name ASC
+        """;
+        
+        return jdbcTemplate.query(sql, this::mapIntegrationFlow, packageId);
+    }
+    
+    /**
+     * Find flow by package ID and name.
+     *
+     * @param packageId Package UUID
+     * @param name Flow name
+     * @return Optional flow
+     */
+    public Optional<IntegrationFlow> findByPackageIdAndName(UUID packageId, String name) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        Objects.requireNonNull(name, "Flow name cannot be null");
+
+        String sql = """
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
+                   max_parallel_executions, timeout_minutes, retry_policy,
+                   total_executions, successful_executions, failed_executions,
+                   average_execution_time_ms, schedule_enabled, schedule_cron,
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows
+            WHERE package_id = ? AND name = ?
+        """;
+
+        try {
+            IntegrationFlow flow = jdbcTemplate.queryForObject(sql, this::mapIntegrationFlow, packageId, name);
+            return Optional.ofNullable(flow);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Count flows in a package.
+     *
+     * @param packageId Package UUID
+     * @return Number of flows in the package
+     */
+    public long countByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = "SELECT COUNT(*) FROM package_flows WHERE package_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, packageId);
+        return count != null ? count.longValue() : 0L;
+    }
+    
+    /**
+     * Find active flows by package ID.
+     * 
+     * @param packageId Package UUID
+     * @return List of active flows in the package
+     */
+    public List<IntegrationFlow> findActiveByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = """
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
+                   max_parallel_executions, timeout_minutes, retry_policy,
+                   total_executions, successful_executions, failed_executions, 
+                   average_execution_time_ms, schedule_enabled, schedule_cron, 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
+            WHERE package_id = ? AND active = true
+            ORDER BY name ASC
+        """;
+        
+        return jdbcTemplate.query(sql, this::mapIntegrationFlow, packageId);
+    }
+    
+    /**
+     * Find scheduled flows by package ID.
+     * 
+     * @param packageId Package UUID
+     * @return List of scheduled flows in the package
+     */
+    public List<IntegrationFlow> findScheduledFlowsByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = """
+            SELECT id, name, description, flow_definition, flow_version, flow_type,
+                   max_parallel_executions, timeout_minutes, retry_policy,
+                   total_executions, successful_executions, failed_executions, 
+                   average_execution_time_ms, schedule_enabled, schedule_cron, 
+                   next_scheduled_run, active, package_id, deployed_from_package_id, original_flow_id, 
+                   created_at, updated_at, created_by, updated_by
+            FROM package_flows 
+            WHERE package_id = ? AND active = true AND schedule_enabled = true
+            ORDER BY next_scheduled_run ASC
+        """;
+        
+        return jdbcTemplate.query(sql, this::mapIntegrationFlow, packageId);
+    }
+    
+    /**
+     * Update flow's package association.
+     * 
+     * @param flowId Flow UUID
+     * @param packageId New package UUID
+     * @param updatedBy User performing the update
+     */
+    public void updatePackageAssociation(UUID flowId, UUID packageId, UUID updatedBy) {
+        Objects.requireNonNull(flowId, "Flow ID cannot be null");
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        Objects.requireNonNull(updatedBy, "Updated by cannot be null");
+        
+        String sql = """
+            UPDATE package_flows SET
+                package_id = ?, updated_at = ?, updated_by = ?
+            WHERE id = ?
+        """;
+        
+        LocalDateTime now = LocalDateTime.now();
+        int rowsAffected = jdbcTemplate.update(sql, packageId, now, updatedBy, flowId);
+        
+        if (rowsAffected == 0) {
+            throw new IllegalStateException("Flow not found: " + flowId);
+        }
+        
+        // Log audit trail for package association update
+        auditService.logDatabaseOperation("UPDATE", "package_flows", flowId, 
+            "package association updated to " + packageId, true, null);
     }
     
     /**
@@ -331,7 +631,7 @@ public class IntegrationFlowRepository {
     public void updateDeploymentStatus(UUID flowId, String deploymentStatus, LocalDateTime timestamp, UUID userId) {
         // Deployment status is now tracked only in deployed_flows table
         // Log audit trail for deployment status change  
-        auditService.logDatabaseOperation("UPDATE", "integration_flows", flowId, 
+        auditService.logDatabaseOperation("UPDATE", "package_flows", flowId, 
             "Deployment Status: " + deploymentStatus + " (tracked in deployed_flows)", true, null);
     }
     
@@ -433,7 +733,6 @@ public class IntegrationFlowRepository {
         flow.setId(UUID.fromString(rs.getString("id")));
         flow.setName(rs.getString("name"));
         flow.setDescription(rs.getString("description"));
-        flow.setBankName(rs.getString("bank_name"));
         flow.setFlowDefinition(convertJsonToMap(rs.getString("flow_definition")));
         flow.setFlowVersion(rs.getInt("flow_version"));
         flow.setFlowType(rs.getString("flow_type"));
@@ -453,6 +752,17 @@ public class IntegrationFlowRepository {
         }
         
         flow.setActive(rs.getBoolean("active"));
+        
+        // Map package context fields
+        String packageId = rs.getString("package_id");
+        if (packageId != null) {
+            flow.setPackageId(UUID.fromString(packageId));
+        }
+        
+        String deployedFromPackageId = rs.getString("deployed_from_package_id");
+        if (deployedFromPackageId != null) {
+            flow.setDeployedFromPackageId(UUID.fromString(deployedFromPackageId));
+        }
         
         String originalFlowId = rs.getString("original_flow_id");
         if (originalFlowId != null) {
@@ -504,12 +814,24 @@ public class IntegrationFlowRepository {
         if (json == null || json.isEmpty() || "{}".equals(json)) {
             return new java.util.HashMap<>();
         }
-        
+
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (JsonProcessingException e) {
             // Return empty map for invalid JSON instead of throwing exception
             return new java.util.HashMap<>();
+        }
+    }
+
+    /**
+     * Get current user UUID for updated_by field
+     */
+    private UUID getUpdatedByUuid() {
+        try {
+            String userId = AuditUtils.getCurrentUserId();
+            return UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 }

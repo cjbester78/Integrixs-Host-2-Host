@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,14 +47,14 @@ public class AdapterRepository {
      */
     public List<Adapter> findAll() {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             ORDER BY created_at DESC
         """;
-        
+
         return jdbcTemplate.query(sql, new AdapterRowMapper());
     }
     
@@ -62,15 +63,15 @@ public class AdapterRepository {
      */
     public List<Adapter> findByType(String adapterType) {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE adapter_type = ?
             ORDER BY name ASC
         """;
-        
+
         return jdbcTemplate.query(sql, new AdapterRowMapper(), adapterType);
     }
     
@@ -79,15 +80,15 @@ public class AdapterRepository {
      */
     public List<Adapter> findByTypeAndDirection(String adapterType, String direction) {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE adapter_type = ? AND direction = ?
             ORDER BY name ASC
         """;
-        
+
         return jdbcTemplate.query(sql, new AdapterRowMapper(), adapterType, direction);
     }
     
@@ -96,15 +97,15 @@ public class AdapterRepository {
      */
     public List<Adapter> findAllActive() {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE active = true
             ORDER BY name ASC
         """;
-        
+
         return jdbcTemplate.query(sql, new AdapterRowMapper());
     }
     
@@ -113,11 +114,11 @@ public class AdapterRepository {
      */
     public Optional<Adapter> findById(UUID id) {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE id = ?
         """;
         
@@ -134,11 +135,11 @@ public class AdapterRepository {
      */
     public Optional<Adapter> findByName(String name) {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE name = ?
         """;
         
@@ -154,7 +155,7 @@ public class AdapterRepository {
      * Check if adapter exists by name
      */
     public boolean existsByName(String name) {
-        String sql = "SELECT COUNT(*) FROM adapters WHERE name = ?";
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE name = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name);
         return count != null && count > 0;
     }
@@ -163,11 +164,41 @@ public class AdapterRepository {
      * Check if adapter exists by name excluding specific ID
      */
     public boolean existsByNameAndNotId(String name, UUID id) {
-        String sql = "SELECT COUNT(*) FROM adapters WHERE name = ? AND id != ?";
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE name = ? AND id != ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name, id);
         return count != null && count > 0;
     }
-    
+
+    /**
+     * Check if adapter has been imported by original adapter ID
+     */
+    public boolean existsByOriginalAdapterId(UUID originalAdapterId) {
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE original_adapter_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, originalAdapterId);
+        return count != null && count > 0;
+    }
+
+    /**
+     * Find adapter by original adapter ID (for re-import/update scenarios)
+     */
+    public Optional<Adapter> findByOriginalAdapterId(UUID originalAdapterId) {
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id, original_adapter_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE original_adapter_id = ?
+        """;
+
+        try {
+            Adapter adapter = jdbcTemplate.queryForObject(sql, new AdapterRowMapper(), originalAdapterId);
+            return Optional.of(adapter);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
     /**
      * Save adapter (insert)
      */
@@ -195,18 +226,17 @@ public class AdapterRepository {
         }
         
         String sql = """
-            INSERT INTO adapters (
-                id, name, bank, description, adapter_type, direction, configuration,
+            INSERT INTO package_adapters (
+                id, name, description, adapter_type, direction, configuration,
                 connection_validated, last_test_at, test_result, active, status,
-                average_execution_time_ms, success_rate_percent,
+                average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                 created_at, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
-        
+
         jdbcTemplate.update(sql,
             adapter.getId(),
             adapter.getName(),
-            adapter.getBank(),
             adapter.getDescription(),
             adapter.getAdapterType(),
             adapter.getDirection(),
@@ -218,6 +248,8 @@ public class AdapterRepository {
             adapter.getStatus() != null ? adapter.getStatus().name() : "STOPPED",
             adapter.getAverageExecutionTimeMs(),
             adapter.getSuccessRatePercent(),
+            adapter.getPackageId(),
+            adapter.getDeployedFromPackageId(),
             adapter.getCreatedAt(),
             createdBy
         );
@@ -248,17 +280,17 @@ public class AdapterRepository {
         }
         
         String sql = """
-            UPDATE adapters SET
-                name = ?, bank = ?, description = ?, adapter_type = ?, direction = ?,
+            UPDATE package_adapters SET
+                name = ?, description = ?, adapter_type = ?, direction = ?,
                 configuration = ?::jsonb, connection_validated = ?, last_test_at = ?,
                 test_result = ?, active = ?, status = ?, average_execution_time_ms = ?,
-                success_rate_percent = ?, updated_at = ?, updated_by = ?
+                success_rate_percent = ?, package_id = ?, deployed_from_package_id = ?,
+                updated_at = ?, updated_by = ?
             WHERE id = ?
         """;
-        
+
         jdbcTemplate.update(sql,
             adapter.getName(),
-            adapter.getBank(),
             adapter.getDescription(),
             adapter.getAdapterType(),
             adapter.getDirection(),
@@ -270,6 +302,8 @@ public class AdapterRepository {
             adapter.getStatus() != null ? adapter.getStatus().name() : "STOPPED",
             adapter.getAverageExecutionTimeMs(),
             adapter.getSuccessRatePercent(),
+            adapter.getPackageId(),
+            adapter.getDeployedFromPackageId(),
             adapter.getUpdatedAt(),
             updatedBy,
             adapter.getId()
@@ -285,18 +319,21 @@ public class AdapterRepository {
      */
     public void updateTestResult(UUID id, boolean successful, String result) {
         String sql = """
-            UPDATE adapters SET
+            UPDATE package_adapters SET
                 connection_validated = ?,
                 test_result = ?,
                 last_test_at = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, successful, result, LocalDateTime.now(), LocalDateTime.now(), id);
-        
+
+        LocalDateTime now = LocalDateTime.now();
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, successful, result, now, now, updatedBy, id);
+
         // Log audit trail for adapter test result update
-        auditService.logDatabaseOperation("UPDATE", "adapters", id, 
+        auditService.logDatabaseOperation("UPDATE", "adapters", id,
             "adapter test result", true, null);
     }
     
@@ -305,17 +342,19 @@ public class AdapterRepository {
      */
     public void updatePerformanceMetrics(UUID id, long executionTimeMs, BigDecimal successRate) {
         String sql = """
-            UPDATE adapters SET
+            UPDATE package_adapters SET
                 average_execution_time_ms = ?,
                 success_rate_percent = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, executionTimeMs, successRate, LocalDateTime.now(), id);
-        
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, executionTimeMs, successRate, LocalDateTime.now(), updatedBy, id);
+
         // Log audit trail for adapter performance metrics update
-        auditService.logDatabaseOperation("UPDATE", "adapters", id, 
+        auditService.logDatabaseOperation("UPDATE", "adapters", id,
             "adapter performance metrics", true, null);
     }
     
@@ -324,16 +363,18 @@ public class AdapterRepository {
      */
     public void setActive(UUID id, boolean active) {
         String sql = """
-            UPDATE adapters SET
+            UPDATE package_adapters SET
                 active = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, active, LocalDateTime.now(), id);
-        
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, active, LocalDateTime.now(), updatedBy, id);
+
         // Log audit trail for adapter enabled/disabled status update
-        auditService.logDatabaseOperation("UPDATE", "adapters", id, 
+        auditService.logDatabaseOperation("UPDATE", "adapters", id,
             "adapter " + (active ? "active" : "inactive"), true, null);
     }
     
@@ -342,16 +383,18 @@ public class AdapterRepository {
      */
     public void updateStatus(UUID id, Adapter.AdapterStatus status) {
         String sql = """
-            UPDATE adapters SET
+            UPDATE package_adapters SET
                 status = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, status.name(), LocalDateTime.now(), id);
-        
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, status.name(), LocalDateTime.now(), updatedBy, id);
+
         // Log audit trail for adapter status update
-        auditService.logDatabaseOperation("UPDATE", "adapters", id, 
+        auditService.logDatabaseOperation("UPDATE", "adapters", id,
             "adapter status updated to " + status.name(), true, null);
     }
     
@@ -363,7 +406,7 @@ public class AdapterRepository {
         Optional<Adapter> adapterOpt = findById(id);
         String adapterName = adapterOpt.map(Adapter::getName).orElse("unknown");
         
-        String sql = "DELETE FROM adapters WHERE id = ?";
+        String sql = "DELETE FROM package_adapters WHERE id = ?";
         int rowsAffected = jdbcTemplate.update(sql, id);
         
         // Log audit trail for adapter deletion
@@ -378,16 +421,263 @@ public class AdapterRepository {
      */
     public List<Adapter> findByCreatedBy(UUID createdBy) {
         String sql = """
-            SELECT id, name, bank, description, adapter_type, direction, configuration,
+            SELECT id, name, description, adapter_type, direction, configuration,
                    connection_validated, last_test_at, test_result, active, status,
-                   average_execution_time_ms, success_rate_percent,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
                    created_at, updated_at, created_by, updated_by
-            FROM adapters 
+            FROM package_adapters
             WHERE created_by = ?
             ORDER BY created_at DESC
         """;
-        
+
         return jdbcTemplate.query(sql, new AdapterRowMapper(), createdBy);
+    }
+    
+    /**
+     * Find adapters by package ID.
+     * 
+     * @param packageId Package UUID to find adapters for
+     * @return List of adapters in the package
+     */
+    public List<Adapter> findByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE package_id = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), packageId);
+    }
+    
+    /**
+     * Count adapters in a package.
+     * 
+     * @param packageId Package UUID
+     * @return Number of adapters in the package
+     */
+    public long countByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE package_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, packageId);
+        return count != null ? count.longValue() : 0L;
+    }
+    
+    /**
+     * Find active adapters by package ID.
+     * 
+     * @param packageId Package UUID
+     * @return List of active adapters in the package
+     */
+    public List<Adapter> findActiveByPackageId(UUID packageId) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE package_id = ? AND active = true
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), packageId);
+    }
+    
+    /**
+     * Find adapters by package ID and type.
+     *
+     * @param packageId Package UUID
+     * @param adapterType Adapter type
+     * @return List of adapters of specified type in the package
+     */
+    public List<Adapter> findByPackageIdAndType(UUID packageId, String adapterType) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        Objects.requireNonNull(adapterType, "Adapter type cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE package_id = ? AND adapter_type = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), packageId, adapterType);
+    }
+
+    /**
+     * Find adapter by package ID and name.
+     *
+     * @param packageId Package UUID
+     * @param name Adapter name
+     * @return Optional adapter
+     */
+    public Optional<Adapter> findByPackageIdAndName(UUID packageId, String name) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        Objects.requireNonNull(name, "Adapter name cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE package_id = ? AND name = ?
+        """;
+
+        try {
+            Adapter adapter = jdbcTemplate.queryForObject(sql, new AdapterRowMapper(), packageId, name);
+            return Optional.ofNullable(adapter);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+    
+    /**
+     * Update adapter's package association.
+     * 
+     * @param adapterId Adapter UUID
+     * @param packageId New package UUID
+     * @param updatedBy User performing the update
+     */
+    public void updatePackageAssociation(UUID adapterId, UUID packageId, UUID updatedBy) {
+        Objects.requireNonNull(adapterId, "Adapter ID cannot be null");
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        Objects.requireNonNull(updatedBy, "Updated by cannot be null");
+        
+        String sql = """
+            UPDATE package_adapters SET
+                package_id = ?, updated_at = ?, updated_by = ?
+            WHERE id = ?
+        """;
+        
+        LocalDateTime now = LocalDateTime.now();
+        int rowsAffected = jdbcTemplate.update(sql, packageId, now, updatedBy, adapterId);
+        
+        if (rowsAffected == 0) {
+            throw new IllegalStateException("Adapter not found: " + adapterId);
+        }
+        
+        // Log audit trail for package association update
+        auditService.logDatabaseOperation("UPDATE", "package_adapters", adapterId, 
+            "package association updated to " + packageId, true, null);
+    }
+    
+    /**
+     * Find adapters by active status
+     */
+    public List<Adapter> findByActive(boolean active) {
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE active = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), active);
+    }
+    
+    /**
+     * Find adapters by package ID and active status
+     */
+    public List<Adapter> findByPackageIdAndActive(UUID packageId, boolean active) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE package_id = ? AND active = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), packageId, active);
+    }
+    
+    /**
+     * Find adapters by type and package
+     */
+    public List<Adapter> findByTypeAndPackageId(String adapterType, UUID packageId) {
+        Objects.requireNonNull(adapterType, "Adapter type cannot be null");
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE adapter_type = ? AND package_id = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), adapterType, packageId);
+    }
+    
+    /**
+     * Find adapters by type, direction and package
+     */
+    public List<Adapter> findByTypeAndDirectionAndPackageId(String adapterType, String direction, UUID packageId) {
+        Objects.requireNonNull(adapterType, "Adapter type cannot be null");
+        Objects.requireNonNull(direction, "Direction cannot be null");
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+
+        String sql = """
+            SELECT id, name, description, adapter_type, direction, configuration,
+                   connection_validated, last_test_at, test_result, active, status,
+                   average_execution_time_ms, success_rate_percent, package_id, deployed_from_package_id,
+                   created_at, updated_at, created_by, updated_by
+            FROM package_adapters
+            WHERE adapter_type = ? AND direction = ? AND package_id = ?
+            ORDER BY name ASC
+        """;
+
+        return jdbcTemplate.query(sql, new AdapterRowMapper(), adapterType, direction, packageId);
+    }
+    
+    /**
+     * Check if adapter exists by name and package
+     */
+    public boolean existsByNameAndPackageId(String name, UUID packageId) {
+        Objects.requireNonNull(name, "Name cannot be null");
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE name = ? AND package_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, name, packageId);
+        return count != null && count > 0;
+    }
+    
+    /**
+     * Count active adapters in package
+     */
+    public long countByPackageIdAndActive(UUID packageId, boolean active) {
+        Objects.requireNonNull(packageId, "Package ID cannot be null");
+        
+        String sql = "SELECT COUNT(*) FROM package_adapters WHERE package_id = ? AND active = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, packageId, active);
+        return count != null ? count.longValue() : 0L;
+    }
+    
+    /**
+     * Delete adapter by ID (alternative method name)
+     */
+    public void delete(UUID id) {
+        deleteById(id);
     }
     
     /**
@@ -406,7 +696,7 @@ public class AdapterRepository {
                 COUNT(*) FILTER (WHERE connection_validated = true) as validated_adapters,
                 AVG(success_rate_percent) as avg_success_rate,
                 AVG(average_execution_time_ms) as avg_execution_time
-            FROM adapters
+            FROM package_adapters
         """;
         
         return jdbcTemplate.queryForMap(sql);
@@ -422,7 +712,6 @@ public class AdapterRepository {
             
             adapter.setId(UUID.fromString(rs.getString("id")));
             adapter.setName(rs.getString("name"));
-            adapter.setBank(rs.getString("bank"));
             adapter.setDescription(rs.getString("description"));
             adapter.setAdapterType(rs.getString("adapter_type"));
             adapter.setDirection(rs.getString("direction"));
@@ -469,6 +758,17 @@ public class AdapterRepository {
                 adapter.setUpdatedBy(UUID.fromString(updatedBy));
             }
             
+            // Map package context fields
+            String packageId = rs.getString("package_id");
+            if (packageId != null) {
+                adapter.setPackageId(UUID.fromString(packageId));
+            }
+            
+            String deployedFromPackageId = rs.getString("deployed_from_package_id");
+            if (deployedFromPackageId != null) {
+                adapter.setDeployedFromPackageId(UUID.fromString(deployedFromPackageId));
+            }
+            
             return adapter;
         }
     }
@@ -495,11 +795,23 @@ public class AdapterRepository {
         if (json == null || json.isEmpty() || "{}".equals(json)) {
             return new HashMap<>();
         }
-        
+
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to convert JSON to map: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get current user UUID for updated_by field
+     */
+    private UUID getUpdatedByUuid() {
+        try {
+            String userId = AuditUtils.getCurrentUserId();
+            return UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 }

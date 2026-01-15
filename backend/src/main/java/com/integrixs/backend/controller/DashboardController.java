@@ -5,8 +5,10 @@ import com.integrixs.backend.service.UserService;
 import com.integrixs.backend.service.SystemConfigurationService;
 import com.integrixs.core.service.AdapterManagementService;
 import com.integrixs.core.service.FlowExecutionService;
+import com.integrixs.core.service.TransactionLogService;
 import com.integrixs.shared.model.Adapter;
 import com.integrixs.shared.model.FlowExecution;
+import com.integrixs.shared.model.TransactionLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -34,13 +36,16 @@ public class DashboardController {
     private final SystemConfigurationService configService;
     private final AdapterManagementService adapterManagementService;
     private final FlowExecutionService flowExecutionService;
+    private final TransactionLogService transactionLogService;
 
     public DashboardController(UserService userService, SystemConfigurationService configService, 
-                             AdapterManagementService adapterManagementService, FlowExecutionService flowExecutionService) {
+                             AdapterManagementService adapterManagementService, FlowExecutionService flowExecutionService,
+                             TransactionLogService transactionLogService) {
         this.userService = userService;
         this.configService = configService;
         this.adapterManagementService = adapterManagementService;
         this.flowExecutionService = flowExecutionService;
+        this.transactionLogService = transactionLogService;
     }
 
     /**
@@ -447,22 +452,133 @@ public class DashboardController {
     }
 
     private List<Map<String, Object>> getRecentActivity(User currentUser) {
-        // Placeholder for recent activity - will be expanded with actual events
-        return List.of(
-            Map.of(
-                "id", "system-start",
-                "type", "SYSTEM",
-                "description", "System started successfully",
-                "timestamp", getSystemStartTime(),
-                "user", "System"
-            ),
-            Map.of(
-                "id", "user-login",
-                "type", "AUTH",
-                "description", "User " + currentUser.getUsername() + " logged in",
-                "timestamp", currentUser.getLastLogin() != null ? currentUser.getLastLogin() : LocalDateTime.now(),
-                "user", currentUser.getUsername()
-            )
-        );
+        try {
+            // Get recent transaction logs for activity feed
+            List<TransactionLog> recentLogs = transactionLogService.getRecentTransactionLogs(10);
+            
+            List<Map<String, Object>> activities = recentLogs.stream()
+                .map(this::convertTransactionLogToActivity)
+                .collect(java.util.stream.Collectors.toList());
+            
+            // Add current user login if not already present
+            boolean hasCurrentUserLogin = activities.stream()
+                .anyMatch(activity -> 
+                    "AUTH".equals(activity.get("type")) && 
+                    currentUser.getUsername().equals(activity.get("user"))
+                );
+            
+            if (!hasCurrentUserLogin) {
+                activities.add(0, Map.of(
+                    "id", "user-login-" + currentUser.getUsername(),
+                    "type", "AUTH",
+                    "description", "User " + currentUser.getUsername() + " logged in",
+                    "timestamp", currentUser.getLastLogin() != null ? currentUser.getLastLogin() : LocalDateTime.now(),
+                    "user", currentUser.getUsername(),
+                    "status", "SUCCESS"
+                ));
+            }
+            
+            // Add system start event if activities list is sparse
+            if (activities.size() < 3) {
+                activities.add(Map.of(
+                    "id", "system-start",
+                    "type", "SYSTEM",
+                    "description", "System started successfully",
+                    "timestamp", getSystemStartTime(),
+                    "user", "System",
+                    "status", "SUCCESS"
+                ));
+            }
+            
+            // Sort by timestamp descending and limit to 10
+            return activities.stream()
+                .sorted((a, b) -> {
+                    LocalDateTime timestampA = (LocalDateTime) a.get("timestamp");
+                    LocalDateTime timestampB = (LocalDateTime) b.get("timestamp");
+                    return timestampB.compareTo(timestampA);
+                })
+                .limit(10)
+                .collect(java.util.stream.Collectors.toList());
+                
+        } catch (Exception e) {
+            logger.warn("Failed to load recent activity from transaction logs, using fallback: {}", e.getMessage());
+            
+            // Fallback to basic activity
+            return List.of(
+                Map.of(
+                    "id", "system-start",
+                    "type", "SYSTEM",
+                    "description", "System started successfully",
+                    "timestamp", getSystemStartTime(),
+                    "user", "System",
+                    "status", "SUCCESS"
+                ),
+                Map.of(
+                    "id", "user-login",
+                    "type", "AUTH",
+                    "description", "User " + currentUser.getUsername() + " logged in",
+                    "timestamp", currentUser.getLastLogin() != null ? currentUser.getLastLogin() : LocalDateTime.now(),
+                    "user", currentUser.getUsername(),
+                    "status", "SUCCESS"
+                )
+            );
+        }
+    }
+    
+    private Map<String, Object> convertTransactionLogToActivity(TransactionLog log) {
+        Map<String, Object> activity = new HashMap<>();
+        
+        activity.put("id", "log-" + log.getId());
+        activity.put("type", mapCategoryToActivityType(log.getCategory()));
+        activity.put("description", log.getMessage());
+        activity.put("timestamp", log.getTimestamp());
+        activity.put("user", log.getUsername() != null ? log.getUsername() : "System");
+        
+        // Determine status from category and message
+        String status = "INFO";
+        if (log.getCategory() != null) {
+            if (log.getCategory().contains("ERROR") || log.getCategory().contains("FAILED")) {
+                status = "ERROR";
+            } else if (log.getCategory().contains("SUCCESS") || log.getCategory().contains("COMPLETED")) {
+                status = "SUCCESS";
+            } else if (log.getCategory().contains("WARN")) {
+                status = "WARNING";
+            }
+        }
+        activity.put("status", status);
+        
+        return activity;
+    }
+    
+    private String mapCategoryToActivityType(String category) {
+        if (category == null) return "SYSTEM";
+        
+        switch (category.toUpperCase()) {
+            case "AUTHENTICATION":
+            case "AUTH":
+            case "LOGIN":
+            case "LOGOUT":
+                return "AUTH";
+            case "FILE_TRANSFER":
+            case "SFTP":
+            case "EMAIL":
+                return "TRANSFER";
+            case "ADAPTER":
+            case "ADAPTER_ERROR":
+            case "ADAPTER_START":
+            case "ADAPTER_STOP":
+                return "ADAPTER";
+            case "FLOW":
+            case "FLOW_EXECUTION":
+                return "FLOW";
+            case "CONFIGURATION":
+            case "CONFIG":
+                return "CONFIG";
+            case "USER_MANAGEMENT":
+            case "USER":
+                return "USER";
+            default:
+                return "SYSTEM";
+        }
     }
 }

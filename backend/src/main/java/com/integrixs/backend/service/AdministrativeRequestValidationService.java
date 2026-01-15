@@ -219,8 +219,156 @@ class SystemHealthValidator implements AdministrativeRequestValidator {
         List<String> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         
-        // System health requests typically have no parameters to validate
-        // This is a placeholder for any future health check parameters
+        // Validate parameters map is not null
+        if (parameters == null) {
+            parameters = new HashMap<>();
+        }
+        
+        // Validate health check detail level parameter
+        if (parameters.containsKey("detailLevel")) {
+            Object detailLevelObj = parameters.get("detailLevel");
+            if (detailLevelObj != null) {
+                String detailLevel = String.valueOf(detailLevelObj).trim().toUpperCase();
+                if (detailLevel.isEmpty()) {
+                    warnings.add("detailLevel parameter is empty, using default");
+                } else {
+                    Set<String> validDetailLevels = Set.of("BASIC", "DETAILED", "FULL", "DIAGNOSTIC");
+                    if (!validDetailLevels.contains(detailLevel)) {
+                        errors.add("Invalid detailLevel '" + detailLevel + "'. Must be one of: " + validDetailLevels);
+                    }
+                }
+            }
+        }
+        
+        // Validate component filter parameter
+        if (parameters.containsKey("components")) {
+            Object componentsObj = parameters.get("components");
+            if (componentsObj != null) {
+                String components = String.valueOf(componentsObj).trim();
+                if (components.isEmpty()) {
+                    warnings.add("components parameter is empty, checking all components");
+                } else {
+                    Set<String> validComponents = Set.of("database", "filesystem", "memory", "cpu", 
+                                                       "network", "adapters", "services", "security", "all");
+                    
+                    // Split by comma and validate each component
+                    String[] componentArray = components.toLowerCase().split(",");
+                    Set<String> uniqueComponents = new HashSet<>();
+                    
+                    for (String component : componentArray) {
+                        String trimmedComponent = component.trim();
+                        if (!trimmedComponent.isEmpty()) {
+                            if (!validComponents.contains(trimmedComponent)) {
+                                errors.add("Invalid component: '" + trimmedComponent + "'. Valid components: " + validComponents);
+                            } else {
+                                uniqueComponents.add(trimmedComponent);
+                            }
+                        }
+                    }
+                    
+                    // Check for duplicate components
+                    if (uniqueComponents.size() != componentArray.length) {
+                        warnings.add("Duplicate components detected, using unique values only");
+                    }
+                    
+                    // Check for conflicting 'all' with specific components
+                    if (uniqueComponents.contains("all") && uniqueComponents.size() > 1) {
+                        warnings.add("Using 'all' with specific components - 'all' takes precedence");
+                    }
+                }
+            }
+        }
+        
+        // Validate timeout parameter for health checks
+        if (parameters.containsKey("timeout")) {
+            Object timeoutObj = parameters.get("timeout");
+            if (timeoutObj != null) {
+                try {
+                    String timeoutStr = String.valueOf(timeoutObj).trim();
+                    if (timeoutStr.isEmpty()) {
+                        warnings.add("timeout parameter is empty, using default");
+                    } else {
+                        int timeout = Integer.parseInt(timeoutStr);
+                        if (timeout <= 0) {
+                            errors.add("Health check timeout must be positive, found: " + timeout);
+                        } else if (timeout < 1000) {
+                            warnings.add("Very short timeout (" + timeout + "ms) may cause false failures");
+                            if (timeout < 100) {
+                                errors.add("Health check timeout too short (minimum 100ms): " + timeout);
+                            }
+                        } else if (timeout > 300000) { // 5 minutes
+                            errors.add("Health check timeout too long (maximum 300000ms/5 minutes): " + timeout);
+                        } else if (timeout > 60000) { // 1 minute
+                            warnings.add("Long timeout (" + timeout + "ms) may delay health check response");
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    errors.add("Invalid timeout value. Must be a number in milliseconds, found: " + timeoutObj);
+                }
+            }
+        }
+        
+        // Validate include metrics flag
+        if (parameters.containsKey("includeMetrics")) {
+            Object includeMetricsObj = parameters.get("includeMetrics");
+            if (includeMetricsObj != null) {
+                String includeMetrics = String.valueOf(includeMetricsObj).trim().toLowerCase();
+                if (includeMetrics.isEmpty()) {
+                    warnings.add("includeMetrics parameter is empty, using default (false)");
+                } else {
+                    Set<String> validBooleans = Set.of("true", "false", "yes", "no", "1", "0", "on", "off");
+                    if (!validBooleans.contains(includeMetrics)) {
+                        warnings.add("includeMetrics should be a boolean value (true/false/yes/no/1/0). Found: " + includeMetricsObj);
+                    }
+                }
+            }
+        }
+        
+        // Validate format parameter for health check output
+        if (parameters.containsKey("format")) {
+            Object formatObj = parameters.get("format");
+            if (formatObj != null) {
+                String format = String.valueOf(formatObj).trim().toUpperCase();
+                if (format.isEmpty()) {
+                    warnings.add("format parameter is empty, using default (JSON)");
+                } else {
+                    Set<String> validFormats = Set.of("JSON", "XML", "PLAIN", "SUMMARY", "TEXT");
+                    if (!validFormats.contains(format)) {
+                        errors.add("Invalid format '" + format + "'. Must be one of: " + validFormats);
+                    }
+                }
+            }
+        }
+        
+        // Validate additional health check specific parameters
+        if (parameters.containsKey("includeSystemInfo")) {
+            Object includeSystemInfoObj = parameters.get("includeSystemInfo");
+            if (includeSystemInfoObj != null) {
+                String includeSystemInfo = String.valueOf(includeSystemInfoObj).trim().toLowerCase();
+                if (!includeSystemInfo.isEmpty()) {
+                    Set<String> validBooleans = Set.of("true", "false", "yes", "no", "1", "0");
+                    if (!validBooleans.contains(includeSystemInfo)) {
+                        warnings.add("includeSystemInfo should be a boolean value. Found: " + includeSystemInfoObj);
+                    }
+                }
+            }
+        }
+        
+        if (parameters.containsKey("maxResults")) {
+            Object maxResultsObj = parameters.get("maxResults");
+            if (maxResultsObj != null) {
+                try {
+                    int maxResults = Integer.parseInt(String.valueOf(maxResultsObj).trim());
+                    if (maxResults <= 0) {
+                        errors.add("maxResults must be positive, found: " + maxResults);
+                    } else if (maxResults > 1000) {
+                        warnings.add("Large maxResults value (" + maxResults + ") may impact performance");
+                    }
+                } catch (NumberFormatException e) {
+                    errors.add("Invalid maxResults value. Must be a positive integer, found: " + maxResultsObj);
+                }
+            }
+        }
         
         return new ExecutionValidationResult(errors.isEmpty(), errors, warnings);
     }

@@ -488,13 +488,95 @@ public class PgpKeyService {
     }
     
     private void setKeyUsageFlags(PgpKey pgpKey, PGPPublicKey publicKey) {
-        // Default usage flags
-        pgpKey.setCanEncrypt(true);
-        pgpKey.setCanSign(true);
+        // Initialize default values
+        pgpKey.setCanEncrypt(false);
+        pgpKey.setCanSign(false);
         pgpKey.setCanCertify(false);
         pgpKey.setCanAuthenticate(false);
         
-        // TODO: Parse actual key usage flags from PGP key
-        // This would require examining the key's signature subpackets
+        try {
+            // Parse actual key usage flags from PGP key signature subpackets
+            @SuppressWarnings("unchecked")
+            java.util.Iterator<PGPSignature> signatures = publicKey.getSignatures();
+            
+            while (signatures.hasNext()) {
+                PGPSignature signature = signatures.next();
+                
+                // Look for key flags in the signature subpackets
+                PGPSignatureSubpacketVector hashedSubPackets = signature.getHashedSubPackets();
+                if (hashedSubPackets != null) {
+                    // Get key flags subpacket
+                    if (hashedSubPackets.hasSubpacket(org.bouncycastle.bcpg.SignatureSubpacketTags.KEY_FLAGS)) {
+                        org.bouncycastle.bcpg.sig.KeyFlags keyFlags = 
+                            (org.bouncycastle.bcpg.sig.KeyFlags) hashedSubPackets.getSubpacket(
+                                org.bouncycastle.bcpg.SignatureSubpacketTags.KEY_FLAGS);
+                        
+                        if (keyFlags != null) {
+                            int flags = keyFlags.getFlags();
+                            
+                            // Parse the key usage flags
+                            pgpKey.setCanSign((flags & KeyFlags.SIGN_DATA) != 0);
+                            pgpKey.setCanCertify((flags & KeyFlags.CERTIFY_OTHER) != 0);
+                            pgpKey.setCanEncrypt((flags & (KeyFlags.ENCRYPT_COMMS | KeyFlags.ENCRYPT_STORAGE)) != 0);
+                            pgpKey.setCanAuthenticate((flags & KeyFlags.AUTHENTICATION) != 0);
+                            
+                            logger.debug("Parsed key usage flags for key {}: encrypt={}, sign={}, certify={}, authenticate={}", 
+                                publicKey.getKeyID(), pgpKey.getCanEncrypt(), pgpKey.getCanSign(), 
+                                pgpKey.getCanCertify(), pgpKey.getCanAuthenticate());
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // If no key flags found, infer from key algorithm and properties
+            int algorithm = publicKey.getAlgorithm();
+            switch (algorithm) {
+                case PGPPublicKey.RSA_GENERAL:
+                    // RSA keys can generally do both encryption and signing
+                    pgpKey.setCanEncrypt(true);
+                    pgpKey.setCanSign(true);
+                    break;
+                case PGPPublicKey.RSA_ENCRYPT:
+                    pgpKey.setCanEncrypt(true);
+                    break;
+                case PGPPublicKey.RSA_SIGN:
+                    pgpKey.setCanSign(true);
+                    break;
+                case PGPPublicKey.DSA:
+                    // DSA keys are primarily for signing
+                    pgpKey.setCanSign(true);
+                    break;
+                case PGPPublicKey.ELGAMAL_ENCRYPT:
+                case PGPPublicKey.ELGAMAL_GENERAL:
+                    // ElGamal keys are primarily for encryption
+                    pgpKey.setCanEncrypt(true);
+                    break;
+                case PGPPublicKey.ECDSA:
+                    // ECDSA keys are for signing
+                    pgpKey.setCanSign(true);
+                    break;
+                case PGPPublicKey.ECDH:
+                    // ECDH keys are for encryption
+                    pgpKey.setCanEncrypt(true);
+                    break;
+                default:
+                    logger.warn("Unknown key algorithm {} for key {}, using default capabilities", 
+                        algorithm, publicKey.getKeyID());
+                    pgpKey.setCanEncrypt(true);
+                    pgpKey.setCanSign(true);
+                    break;
+            }
+            
+            logger.debug("Inferred key usage flags for key {} based on algorithm {}: encrypt={}, sign={}", 
+                publicKey.getKeyID(), algorithm, pgpKey.getCanEncrypt(), pgpKey.getCanSign());
+                
+        } catch (Exception e) {
+            logger.warn("Failed to parse key usage flags for key {}, using defaults: {}", 
+                publicKey.getKeyID(), e.getMessage());
+            // Fallback to safe defaults
+            pgpKey.setCanEncrypt(true);
+            pgpKey.setCanSign(true);
+        }
     }
 }

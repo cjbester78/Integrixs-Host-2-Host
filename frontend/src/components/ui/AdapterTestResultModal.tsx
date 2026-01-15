@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog'
 
 interface TestResultData {
-  success: boolean
+  success?: boolean
+  testSuccess?: boolean
   error?: string
   testResult?: string
   testType?: string
@@ -36,7 +37,9 @@ interface AdapterTestResultModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   testResult: {
-    data: TestResultData
+    data: {
+      data?: TestResultData
+    } & TestResultData
   } | null
 }
 
@@ -45,9 +48,15 @@ export const AdapterTestResultModal: React.FC<AdapterTestResultModalProps> = ({
   onOpenChange,
   testResult,
 }) => {
-  if (!testResult?.data) return null
+  // Handle nested ApiResponse structure: testResult.data.data or testResult.data
+  const rawData = testResult?.data?.data || testResult?.data
+  if (!rawData) return null
 
-  const data = testResult.data
+  // Normalize success field (API uses testSuccess, frontend expects success)
+  const data = {
+    ...rawData,
+    success: rawData.success ?? rawData.testSuccess ?? false
+  }
 
   const StatusIcon = ({ success }: { success: boolean }) => (
     success ? (

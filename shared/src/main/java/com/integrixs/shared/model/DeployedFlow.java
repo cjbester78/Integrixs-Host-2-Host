@@ -48,10 +48,9 @@ public class DeployedFlow {
     private String lastErrorMessage;
     private Integer consecutiveFailures;
     
-    // Configuration snapshots at deployment time
+    // Configuration snapshot at deployment time
     private Map<String, Object> flowConfiguration; // Complete flow definition snapshot
-    private Map<String, Object> senderAdapterConfig; // Inbound adapter configuration snapshot
-    private Map<String, Object> receiverAdapterConfig; // Outbound adapter configuration snapshot
+    // Note: Adapter configs are read from adapters table during execution, not stored here
     
     // Deployment audit
     private LocalDateTime deployedAt;
@@ -473,21 +472,6 @@ public class DeployedFlow {
         this.flowConfiguration = flowConfiguration;
     }
     
-    public Map<String, Object> getSenderAdapterConfig() {
-        return senderAdapterConfig;
-    }
-    
-    public void setSenderAdapterConfig(Map<String, Object> senderAdapterConfig) {
-        this.senderAdapterConfig = senderAdapterConfig;
-    }
-    
-    public Map<String, Object> getReceiverAdapterConfig() {
-        return receiverAdapterConfig;
-    }
-    
-    public void setReceiverAdapterConfig(Map<String, Object> receiverAdapterConfig) {
-        this.receiverAdapterConfig = receiverAdapterConfig;
-    }
     
     public LocalDateTime getDeployedAt() {
         return deployedAt;

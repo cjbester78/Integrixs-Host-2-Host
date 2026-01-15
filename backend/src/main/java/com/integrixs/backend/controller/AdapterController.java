@@ -4,9 +4,13 @@ import com.integrixs.backend.dto.ApiResponse;
 import com.integrixs.core.service.AdapterManagementService;
 import com.integrixs.core.service.DeployedFlowSchedulingService;
 import com.integrixs.core.service.FlowMonitoringService;
+import com.integrixs.core.service.PackageMetadataService;
+import com.integrixs.core.service.TransactionLogService;
 import com.integrixs.core.repository.DeployedFlowRepository;
 import com.integrixs.shared.model.Adapter;
 import com.integrixs.shared.model.DeployedFlow;
+import com.integrixs.shared.model.IntegrationPackage;
+import com.integrixs.shared.model.TransactionLog;
 import com.integrixs.shared.util.SecurityContextHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.*;
 
@@ -28,6 +33,8 @@ public class AdapterController {
     private final DeployedFlowSchedulingService deployedFlowSchedulingService;
     private final DeployedFlowRepository deployedFlowRepository;
     private final FlowMonitoringService monitoringService;
+    private final PackageMetadataService packageMetadataService;
+    private final TransactionLogService transactionLogService;
     private final JdbcTemplate jdbcTemplate;
     
     @Autowired
@@ -35,12 +42,16 @@ public class AdapterController {
                            DeployedFlowSchedulingService deployedFlowSchedulingService,
                            DeployedFlowRepository deployedFlowRepository,
                            FlowMonitoringService monitoringService,
+                           PackageMetadataService packageMetadataService,
+                           TransactionLogService transactionLogService,
                            JdbcTemplate jdbcTemplate) {
-        this.adapterManagementService = adapterManagementService;
-        this.deployedFlowSchedulingService = deployedFlowSchedulingService;
-        this.deployedFlowRepository = deployedFlowRepository;
-        this.monitoringService = monitoringService;
-        this.jdbcTemplate = jdbcTemplate;
+        this.adapterManagementService = Objects.requireNonNull(adapterManagementService, "Adapter management service cannot be null");
+        this.deployedFlowSchedulingService = Objects.requireNonNull(deployedFlowSchedulingService, "Deployed flow scheduling service cannot be null");
+        this.deployedFlowRepository = Objects.requireNonNull(deployedFlowRepository, "Deployed flow repository cannot be null");
+        this.monitoringService = Objects.requireNonNull(monitoringService, "Monitoring service cannot be null");
+        this.packageMetadataService = Objects.requireNonNull(packageMetadataService, "Package metadata service cannot be null");
+        this.transactionLogService = Objects.requireNonNull(transactionLogService, "Transaction log service cannot be null");
+        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "JDBC template cannot be null");
     }
     
     @GetMapping
@@ -48,22 +59,57 @@ public class AdapterController {
     public ResponseEntity<ApiResponse<List<Adapter>>> getAllAdapters(
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "direction", required = false) String direction,
-            @RequestParam(value = "enabled", required = false) Boolean enabled) {
+            @RequestParam(value = "enabled", required = false) Boolean enabled,
+            @RequestParam(value = "packageId", required = false) String packageId) {
         String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} requesting adapters (type: {}, direction: {}, enabled: {})", 
-                   currentUser, type, direction, enabled);
+        logger.info("User {} requesting adapters (type: {}, direction: {}, enabled: {}, packageId: {})", 
+                   currentUser, type, direction, enabled, packageId);
         
         try {
             List<Adapter> adapters;
+            UUID packageUuid = null;
             
-            if (enabled != null && enabled) {
-                adapters = adapterManagementService.getActiveAdapters();
-            } else if (type != null && direction != null) {
-                adapters = adapterManagementService.getAdaptersByTypeAndDirection(type.toUpperCase(), direction.toUpperCase());
-            } else if (type != null) {
-                adapters = adapterManagementService.getAdaptersByType(type.toUpperCase());
+            // Parse and validate package ID if provided
+            if (packageId != null && !packageId.trim().isEmpty()) {
+                try {
+                    packageUuid = UUID.fromString(packageId.trim());
+                    // Validate package exists
+                    packageMetadataService.findPackageById(packageUuid);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Invalid package ID format: " + packageId));
+                } catch (IllegalStateException e) {
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Package not found: " + packageId));
+                }
+            }
+            
+            // Apply filtering logic with package context
+            if (packageUuid != null) {
+                // Package-scoped queries
+                if (enabled != null && enabled) {
+                    adapters = adapterManagementService.getActiveAdaptersByPackage(packageUuid);
+                } else if (type != null && direction != null) {
+                    adapters = adapterManagementService.getAdaptersByTypeDirectionAndPackage(
+                        type.toUpperCase(), direction.toUpperCase(), packageUuid);
+                } else if (type != null) {
+                    adapters = adapterManagementService.getAdaptersByTypeAndPackage(
+                        type.toUpperCase(), packageUuid);
+                } else {
+                    adapters = adapterManagementService.getAdaptersByPackage(packageUuid);
+                }
             } else {
-                adapters = adapterManagementService.getAllAdapters();
+                // Global queries (backward compatibility)
+                if (enabled != null && enabled) {
+                    adapters = adapterManagementService.getActiveAdapters();
+                } else if (type != null && direction != null) {
+                    adapters = adapterManagementService.getAdaptersByTypeAndDirection(
+                        type.toUpperCase(), direction.toUpperCase());
+                } else if (type != null) {
+                    adapters = adapterManagementService.getAdaptersByType(type.toUpperCase());
+                } else {
+                    adapters = adapterManagementService.getAllAdapters();
+                }
             }
             
             // Enhance adapters with runtime status from deployed flows
@@ -122,15 +168,34 @@ public class AdapterController {
     
     @PostMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<ApiResponse<Adapter>> createAdapter(@RequestBody Adapter adapterData) {
+    public ResponseEntity<ApiResponse<Adapter>> createAdapter(
+            @Valid @RequestBody CreateAdapterRequest request) {
         String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
-        logger.info("User {} creating adapter: {}", currentUser, adapterData.getName());
+        logger.info("User {} creating adapter: {} in package: {}", 
+                   currentUser, request.getAdapter().getName(), request.getPackageId());
         
         try {
             UUID createdBy = UUID.fromString(currentUser);
-            Adapter createdAdapter = adapterManagementService.createAdapter(adapterData, createdBy);
             
-            logger.info("Successfully created adapter for user {}", currentUser);
+            // Validate package exists if provided
+            UUID packageId = null;
+            if (request.getPackageId() != null) {
+                packageId = validateAndGetPackageId(request.getPackageId());
+            }
+            
+            Adapter createdAdapter;
+            if (packageId != null) {
+                // Use package-aware creation
+                createdAdapter = adapterManagementService.createAdapter(
+                    request.getAdapter(), packageId, createdBy);
+            } else {
+                // Use legacy creation (backward compatibility)
+                createdAdapter = adapterManagementService.createAdapter(
+                    request.getAdapter(), createdBy);
+            }
+            
+            logger.info("Successfully created adapter {} in package {} for user {}", 
+                       createdAdapter.getId(), packageId, currentUser);
             return ResponseEntity.status(201)
                 .body(new ApiResponse<>(
                     true, 
@@ -151,15 +216,15 @@ public class AdapterController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Adapter>> updateAdapter(
-            @PathVariable String id, 
-            @RequestBody Adapter adapterData) {
+            @PathVariable String id,
+            @Valid @RequestBody CreateAdapterRequest request) {
         String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
         logger.info("User {} updating adapter: {}", currentUser, id);
-        
+
         try {
             UUID adapterId = UUID.fromString(id);
             UUID updatedBy = UUID.fromString(currentUser);
-            Adapter updatedAdapter = adapterManagementService.updateAdapter(adapterId, adapterData, updatedBy);
+            Adapter updatedAdapter = adapterManagementService.updateAdapter(adapterId, request.getAdapter(), updatedBy);
             
             logger.info("Successfully updated adapter {} for user {}", id, currentUser);
             return ResponseEntity.ok(new ApiResponse<>(
@@ -400,14 +465,34 @@ public class AdapterController {
                 adapterIdUuid = UUID.fromString(adapterId);
             }
             
-            // Get adapter logs from system log repository
-            // This is a placeholder implementation - could be enhanced to filter by specific adapter
+            // Get adapter logs from transaction log service
             List<Map<String, Object>> logs = new ArrayList<>();
             
-            // For now, return empty list but structure is in place for future enhancement
-            if (adapterIdUuid != null) {
-                logger.debug("Adapter logs requested for adapter: {}", adapterIdUuid);
-                // Future implementation: fetch logs specific to this adapter
+            try {
+                if (adapterIdUuid != null) {
+                    logger.debug("Fetching logs for adapter: {}", adapterIdUuid);
+                    
+                    // Get transaction logs specific to this adapter
+                    List<TransactionLog> adapterLogs = transactionLogService.getAdapterTransactionLogs(adapterIdUuid, 100);
+                    
+                    // Convert to API format
+                    logs = adapterLogs.stream()
+                        .map(this::convertLogToApiFormat)
+                        .collect(java.util.stream.Collectors.toList());
+                        
+                } else {
+                    // No specific adapter requested, get recent adapter-related logs
+                    List<TransactionLog> recentLogs = transactionLogService.getTransactionLogsByCategory("ADAPTER", 50);
+                    
+                    // Convert to API format
+                    logs = recentLogs.stream()
+                        .map(this::convertLogToApiFormat)
+                        .collect(java.util.stream.Collectors.toList());
+                }
+                
+            } catch (Exception e) {
+                logger.error("Error fetching adapter logs for adapter: {}", adapterId, e);
+                // Return empty list on error but log it
             }
             
             return ResponseEntity.ok(new ApiResponse<>(
@@ -424,6 +509,34 @@ public class AdapterController {
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Failed to retrieve adapter logs", null));
         }
+    }
+    
+    private Map<String, Object> convertLogToApiFormat(TransactionLog log) {
+        Map<String, Object> apiLog = new HashMap<>();
+        
+        apiLog.put("id", log.getId());
+        apiLog.put("timestamp", log.getTimestamp());
+        apiLog.put("category", log.getCategory());
+        apiLog.put("subcategory", log.getComponent());
+        apiLog.put("message", log.getMessage());
+        apiLog.put("details", log.getDetails());
+        apiLog.put("username", log.getUsername());
+        apiLog.put("adapterId", log.getAdapterId());
+        
+        // Determine log level from category
+        String level = "INFO";
+        if (log.getCategory() != null) {
+            if (log.getCategory().contains("ERROR") || log.getCategory().contains("FAILED")) {
+                level = "ERROR";
+            } else if (log.getCategory().contains("WARN")) {
+                level = "WARN";
+            } else if (log.getCategory().contains("SUCCESS")) {
+                level = "INFO";
+            }
+        }
+        apiLog.put("level", level);
+        
+        return apiLog;
     }
     
     /**
@@ -555,6 +668,232 @@ public class AdapterController {
         }
         
         return status;
+    }
+    
+    // Package-aware endpoint additions following OOP principles
+    
+    /**
+     * Get adapters by package with enhanced filtering.
+     * 
+     * @param packageId Package UUID
+     * @param type Optional adapter type filter
+     * @param direction Optional direction filter
+     * @param enabled Optional enabled status filter
+     * @return List of adapters in the specified package
+     */
+    @GetMapping("/package/{packageId}")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
+    public ResponseEntity<ApiResponse<List<Adapter>>> getAdaptersByPackage(
+            @PathVariable String packageId,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "direction", required = false) String direction,
+            @RequestParam(value = "enabled", required = false) Boolean enabled) {
+        
+        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
+        logger.info("User {} requesting adapters for package {} (type: {}, direction: {}, enabled: {})", 
+                   currentUser, packageId, type, direction, enabled);
+        
+        try {
+            UUID packageUuid = validateAndGetPackageId(packageId);
+            List<Adapter> adapters;
+            
+            if (enabled != null && enabled) {
+                adapters = adapterManagementService.getActiveAdaptersByPackage(packageUuid);
+            } else if (type != null && direction != null) {
+                adapters = adapterManagementService.getAdaptersByTypeDirectionAndPackage(
+                    type.toUpperCase(), direction.toUpperCase(), packageUuid);
+            } else if (type != null) {
+                adapters = adapterManagementService.getAdaptersByTypeAndPackage(
+                    type.toUpperCase(), packageUuid);
+            } else {
+                adapters = adapterManagementService.getAdaptersByPackage(packageUuid);
+            }
+            
+            // Enhance adapters with runtime status
+            List<Adapter> enhancedAdapters = adapters.stream()
+                .map(this::enhanceAdapterWithRuntimeStatus)
+                .toList();
+            
+            return ResponseEntity.ok(new ApiResponse<>(
+                true, 
+                "Package adapters retrieved successfully", 
+                enhancedAdapters
+            ));
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request from user {}: {}", currentUser, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error retrieving package adapters for user {}: {}", currentUser, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Failed to retrieve package adapters"));
+        }
+    }
+    
+    /**
+     * Get package adapter statistics.
+     * 
+     * @param packageId Package UUID
+     * @return Package adapter statistics
+     */
+    @GetMapping("/package/{packageId}/statistics")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR') or hasAuthority('VIEWER')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPackageAdapterStatistics(
+            @PathVariable String packageId) {
+        
+        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
+        logger.info("User {} requesting adapter statistics for package {}", currentUser, packageId);
+        
+        try {
+            UUID packageUuid = validateAndGetPackageId(packageId);
+            Map<String, Object> statistics = adapterManagementService.getAdapterStatisticsByPackage(packageUuid);
+            
+            return ResponseEntity.ok(new ApiResponse<>(
+                true, 
+                "Package adapter statistics retrieved successfully", 
+                statistics
+            ));
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request from user {}: {}", currentUser, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error retrieving package adapter statistics for user {}: {}", currentUser, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Failed to retrieve package adapter statistics"));
+        }
+    }
+    
+    /**
+     * Move adapter to a different package.
+     * 
+     * @param adapterId Adapter UUID
+     * @param request Move adapter request containing target package ID
+     * @return Success response
+     */
+    @PutMapping("/{adapterId}/package")
+    @PreAuthorize("hasAuthority('ADMINISTRATOR')")
+    public ResponseEntity<ApiResponse<Void>> moveAdapterToPackage(
+            @PathVariable String adapterId,
+            @Valid @RequestBody MoveAdapterRequest request) {
+        
+        String currentUser = SecurityContextHelper.getCurrentUserIdAsString();
+        logger.info("User {} moving adapter {} to package {}", 
+                   currentUser, adapterId, request.getTargetPackageId());
+        
+        try {
+            UUID adapterUuid = UUID.fromString(adapterId);
+            UUID targetPackageId = validateAndGetPackageId(request.getTargetPackageId());
+            UUID movedBy = UUID.fromString(currentUser);
+            
+            // Get current adapter to find source package
+            Adapter adapter = adapterManagementService.getAdapterById(adapterUuid)
+                .orElseThrow(() -> new IllegalArgumentException("Adapter not found: " + adapterId));
+            
+            if (adapter.getPackageId() == null) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Adapter is not currently associated with any package"));
+            }
+            
+            boolean moved = adapterManagementService.moveAdapterBetweenPackages(
+                adapterUuid, adapter.getPackageId(), targetPackageId, movedBy);
+            
+            if (moved) {
+                logger.info("Successfully moved adapter {} to package {} by user {}", 
+                           adapterId, targetPackageId, currentUser);
+                return ResponseEntity.ok(new ApiResponse<>(
+                    true, 
+                    "Adapter moved to package successfully", 
+                    null
+                ));
+            } else {
+                return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to move adapter to package"));
+            }
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request from user {}: {}", currentUser, e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error moving adapter {} for user {}: {}", adapterId, currentUser, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Failed to move adapter to package"));
+        }
+    }
+    
+    // Private helper methods following OOP encapsulation principles
+    
+    /**
+     * Validate and parse package ID.
+     * 
+     * @param packageId Package ID string
+     * @return Validated UUID
+     * @throws IllegalArgumentException if package ID is invalid or package not found
+     */
+    private UUID validateAndGetPackageId(String packageId) {
+        if (packageId == null || packageId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Package ID cannot be null or empty");
+        }
+        
+        UUID packageUuid;
+        try {
+            packageUuid = UUID.fromString(packageId.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid package ID format: " + packageId);
+        }
+        
+        // Validate package exists
+        try {
+            packageMetadataService.findPackageById(packageUuid);
+        } catch (IllegalStateException e) {
+            throw new IllegalArgumentException("Package not found: " + packageId);
+        }
+        
+        return packageUuid;
+    }
+    
+    // Request/Response DTOs following encapsulation principles
+    
+    /**
+     * Request DTO for creating adapters with package context.
+     */
+    public static class CreateAdapterRequest {
+        private Adapter adapter;
+        private String packageId;
+        
+        public CreateAdapterRequest() {}
+        
+        public CreateAdapterRequest(Adapter adapter, String packageId) {
+            this.adapter = adapter;
+            this.packageId = packageId;
+        }
+        
+        public Adapter getAdapter() { return adapter; }
+        public void setAdapter(Adapter adapter) { this.adapter = adapter; }
+        
+        public String getPackageId() { return packageId; }
+        public void setPackageId(String packageId) { this.packageId = packageId; }
+    }
+    
+    /**
+     * Request DTO for moving adapters between packages.
+     */
+    public static class MoveAdapterRequest {
+        private String targetPackageId;
+        private String reason;
+        
+        public MoveAdapterRequest() {}
+        
+        public MoveAdapterRequest(String targetPackageId, String reason) {
+            this.targetPackageId = targetPackageId;
+            this.reason = reason;
+        }
+        
+        public String getTargetPackageId() { return targetPackageId; }
+        public void setTargetPackageId(String targetPackageId) { this.targetPackageId = targetPackageId; }
+        
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
     }
     
     /**

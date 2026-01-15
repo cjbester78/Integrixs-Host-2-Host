@@ -80,13 +80,14 @@ public class FlowExportCrypto {
             
             // Create encrypted export package
             Map<String, Object> encryptedExport = new HashMap<>();
-            encryptedExport.put("version", "H2H_ENCRYPTED_V1");
+            encryptedExport.put("version", "H2H_ENCRYPTED_FLOW_V1");
             encryptedExport.put("algorithm", "AES-256-GCM");
             encryptedExport.put("iv", Base64.getEncoder().encodeToString(iv));
             encryptedExport.put("data", Base64.getEncoder().encodeToString(encryptedData));
             encryptedExport.put("encryptedAt", System.currentTimeMillis());
             encryptedExport.put("application", "Integrixs Host-2-Host");
-            
+            encryptedExport.put("type", "FLOW_EXPORT");
+
             // Add integrity check
             String flowName = (String) flowExportData.get("name");
             encryptedExport.put("flowNameHash", hashFlowName(flowName));
@@ -155,11 +156,13 @@ public class FlowExportCrypto {
      * Check if the given data is an encrypted flow export.
      */
     public boolean isEncryptedFlowExport(Map<String, Object> data) {
-        return data.containsKey("version") && 
-               data.containsKey("algorithm") && 
-               data.containsKey("iv") && 
+        return data.containsKey("version") &&
+               data.containsKey("algorithm") &&
+               data.containsKey("iv") &&
                data.containsKey("data") &&
-               "H2H_ENCRYPTED_V1".equals(data.get("version"));
+               data.containsKey("type") &&
+               ("H2H_ENCRYPTED_FLOW_V1".equals(data.get("version")) || "H2H_ENCRYPTED_V1".equals(data.get("version"))) &&
+               "FLOW_EXPORT".equals(data.get("type"));
     }
     
     /**
@@ -169,17 +172,23 @@ public class FlowExportCrypto {
         if (!isEncryptedFlowExport(encryptedExport)) {
             throw new IllegalArgumentException("Invalid encrypted flow export format");
         }
-        
+
         String version = (String) encryptedExport.get("version");
-        if (!"H2H_ENCRYPTED_V1".equals(version)) {
+        if (!"H2H_ENCRYPTED_FLOW_V1".equals(version) && !"H2H_ENCRYPTED_V1".equals(version)) {
             throw new IllegalArgumentException("Unsupported encrypted flow export version: " + version);
         }
-        
+
         String algorithm = (String) encryptedExport.get("algorithm");
         if (!"AES-256-GCM".equals(algorithm)) {
             throw new IllegalArgumentException("Unsupported encryption algorithm: " + algorithm);
         }
-        
+
+        String type = (String) encryptedExport.get("type");
+        if (!"FLOW_EXPORT".equals(type)) {
+            logger.warn("Invalid export type for flow: {}", type);
+            throw new IllegalArgumentException("Export type must be FLOW_EXPORT for flow imports");
+        }
+
         String application = (String) encryptedExport.get("application");
         if (!"Integrixs Host-2-Host".equals(application)) {
             logger.warn("Flow export from different application: {}", application);

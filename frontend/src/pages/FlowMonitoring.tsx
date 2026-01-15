@@ -49,12 +49,12 @@ const FlowMonitoring: React.FC = () => {
   const [flowFilter, setFlowFilter] = useState<string>('all')
 
   // Fetch flow executions
-  const { data: executionsResponse, isLoading: executionsLoading } = useQuery({
+  const { data: executionsResponse, isLoading: executionsLoading, refetch: refetchExecutions } = useQuery({
     queryKey: ['flow-executions', statusFilter, flowFilter],
-    queryFn: () => executionApi.getAllExecutions({ 
+    queryFn: () => executionApi.getAllExecutions({
       status: statusFilter === 'all' ? undefined : statusFilter,
       flowId: flowFilter === 'all' ? undefined : flowFilter,
-      size: 50 
+      size: 50
     }),
     refetchInterval: 5000, // Refresh every 5 seconds for real-time monitoring
   })
@@ -147,9 +147,7 @@ const FlowMonitoring: React.FC = () => {
         </div>
         <Button
           variant="outline"
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: ['flow-executions'] })
-          }}
+          onClick={() => refetchExecutions()}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh

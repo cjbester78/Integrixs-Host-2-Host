@@ -48,7 +48,7 @@ const AdapterMonitoring: React.FC = () => {
   const [pendingStopIds, setPendingStopIds] = useState<Set<string>>(new Set())
 
   // Fetch adapters with status
-  const { data: adaptersResponse, isLoading: adaptersLoading } = useQuery({
+  const { data: adaptersResponse, isLoading: adaptersLoading, refetch: refetchAdapters } = useQuery({
     queryKey: ['adapters-monitoring'],
     queryFn: () => adapterApi.getAllAdapters(),
     refetchInterval: 5000, // Refresh every 5 seconds for real-time status
@@ -190,7 +190,7 @@ const AdapterMonitoring: React.FC = () => {
         </div>
         <Button
           variant="outline"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['adapters-monitoring'] })}
+          onClick={() => refetchAdapters()}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh

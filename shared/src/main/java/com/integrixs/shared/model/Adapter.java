@@ -38,7 +38,6 @@ public class Adapter {
     
     private UUID id;
     private String name;
-    private String bank;
     private String description;
     private String adapterType; // SFTP, FILE, EMAIL
     private String direction; // SENDER, RECEIVER
@@ -52,6 +51,10 @@ public class Adapter {
     // Status and control
     private Boolean active;
     private AdapterStatus status;
+    
+    // Package context
+    private UUID packageId;  // Package this adapter belongs to
+    private UUID deployedFromPackageId;  // Original package for audit trail
     
     // Import tracking
     private UUID originalAdapterId;  // ID of the original adapter when imported
@@ -79,15 +82,20 @@ public class Adapter {
         this.updatedBy = null;
     }
     
-    public Adapter(String name, String bank, String adapterType, String direction, Map<String, Object> configuration, UUID createdBy) {
+    public Adapter(String name, String adapterType, String direction, Map<String, Object> configuration, UUID createdBy) {
         this();
         this.name = name;
-        this.bank = bank;
         this.adapterType = adapterType;
         this.direction = direction;
         this.configuration = configuration;
         this.createdBy = createdBy;
         // Do not set updatedBy on creation - only set on actual updates
+    }
+
+    public Adapter(String name, String adapterType, String direction, Map<String, Object> configuration, UUID packageId, UUID createdBy) {
+        this(name, adapterType, direction, configuration, createdBy);
+        this.packageId = Objects.requireNonNull(packageId, "Package ID cannot be null");
+        this.deployedFromPackageId = packageId; // Initially same as package ID
     }
     
     /**
@@ -168,6 +176,32 @@ public class Adapter {
         this.lastTestAt = LocalDateTime.now();
     }
     
+    /**
+     * Associate adapter with a package during deployment
+     */
+    public void deployToPackage(UUID packageId, UUID updatedBy) {
+        this.packageId = Objects.requireNonNull(packageId, "Package ID cannot be null");
+        if (this.deployedFromPackageId == null) {
+            this.deployedFromPackageId = packageId;
+        }
+        markAsUpdated(updatedBy);
+    }
+    
+    /**
+     * Check if adapter belongs to a specific package
+     */
+    public boolean belongsToPackage(UUID packageId) {
+        return this.packageId != null && this.packageId.equals(packageId);
+    }
+    
+    /**
+     * Check if adapter was originally deployed from a different package
+     */
+    public boolean wasMovedBetweenPackages() {
+        return deployedFromPackageId != null && packageId != null && 
+               !deployedFromPackageId.equals(packageId);
+    }
+    
     // Getters and Setters
     public UUID getId() {
         return id;
@@ -184,15 +218,7 @@ public class Adapter {
     public void setName(String name) {
         this.name = name;
     }
-    
-    public String getBank() {
-        return bank;
-    }
-    
-    public void setBank(String bank) {
-        this.bank = bank;
-    }
-    
+
     public String getDescription() {
         return description;
     }
@@ -255,6 +281,22 @@ public class Adapter {
     
     public void setActive(Boolean active) {
         this.active = active;
+    }
+    
+    public UUID getPackageId() {
+        return packageId;
+    }
+    
+    public void setPackageId(UUID packageId) {
+        this.packageId = packageId;
+    }
+    
+    public UUID getDeployedFromPackageId() {
+        return deployedFromPackageId;
+    }
+    
+    public void setDeployedFromPackageId(UUID deployedFromPackageId) {
+        this.deployedFromPackageId = deployedFromPackageId;
     }
     
     public UUID getOriginalAdapterId() {

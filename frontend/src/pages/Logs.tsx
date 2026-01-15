@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Download, Filter, Search, RefreshCw, AlertTriangle, Info, CheckCircle } from 'lucide-react'
-import { interfaceApi } from '@/lib/api'
 
 interface LogEntry {
   id: string
@@ -24,17 +23,10 @@ interface LogStats {
 const Logs: React.FC = () => {
   const [filters, setFilters] = useState({
     level: 'ALL',
-    bank: 'ALL',
     operation: 'ALL',
     timeRange: 'LAST_HOUR'
   })
   const [searchTerm, setSearchTerm] = useState('')
-
-  // Fetch adapters to populate bank dropdown dynamically
-  const { data: adaptersResponse } = useQuery({
-    queryKey: ['interfaces'],
-    queryFn: interfaceApi.getAllInterfaces,
-  })
 
   // Fetch logs from API
   const { data: logsResponse, isLoading, refetch } = useQuery({
@@ -42,10 +34,9 @@ const Logs: React.FC = () => {
     queryFn: async () => {
       const params = new URLSearchParams()
       params.append('limit', '100')
-      if (filters.bank !== 'ALL') params.append('bankName', filters.bank)
       if (filters.level !== 'ALL') params.append('level', filters.level)
       if (searchTerm) params.append('search', searchTerm)
-      
+
       const response = await fetch(`/api/system/logs/recent?${params}`)
       return response.json()
     },
@@ -57,21 +48,16 @@ const Logs: React.FC = () => {
     queryKey: ['system-stats', filters],
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (filters.bank !== 'ALL') params.append('bankName', filters.bank)
       params.append('hours', '24')
-      
+
       const response = await fetch(`/api/system/statistics?${params}`)
       return response.json()
     },
     refetchInterval: 60000, // Refresh stats every minute
   })
 
-  const adapters = adaptersResponse?.data || []
   const logs: LogEntry[] = logsResponse || []
   const stats: LogStats = statsResponse || { errors: 0, warnings: 0, info: 0, total: 0 }
-
-  // Get unique bank names for dropdown
-  const uniqueBanks = [...new Set(adapters.map((adapter: any) => adapter.bank))].sort() as string[]
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -80,7 +66,6 @@ const Logs: React.FC = () => {
   const handleExport = async () => {
     try {
       const params = new URLSearchParams()
-      if (filters.bank !== 'ALL') params.append('bankName', filters.bank)
       if (filters.level !== 'ALL') params.append('level', filters.level)
       params.append('format', 'csv')
       
@@ -140,10 +125,10 @@ const Logs: React.FC = () => {
       {/* Log Controls */}
       <div className="app-card rounded-lg p-6 border">
         <h2 className="text-xl font-semibold text-foreground mb-4">Log Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Log Level</label>
-            <select 
+            <select
               value={filters.level}
               onChange={(e) => handleFilterChange('level', e.target.value)}
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
@@ -157,22 +142,8 @@ const Logs: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Bank</label>
-            <select 
-              value={filters.bank}
-              onChange={(e) => handleFilterChange('bank', e.target.value)}
-              className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
-            >
-              <option value="ALL">All Banks</option>
-              {uniqueBanks.map((bank: string) => (
-                <option key={bank} value={bank}>{bank}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-foreground mb-1">Operation</label>
-            <select 
+            <select
               value={filters.operation}
               onChange={(e) => handleFilterChange('operation', e.target.value)}
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
@@ -187,7 +158,7 @@ const Logs: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Time Range</label>
-            <select 
+            <select
               value={filters.timeRange}
               onChange={(e) => handleFilterChange('timeRange', e.target.value)}
               className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class FlowExportConfiguration {
     
-    @Value("${h2h.flow.export.format:H2H_FLOW_V1}")
+    @Value("${h2h.flow.export.format:H2H_FLOW_V3}")
     private String format;
     
     @Value("${h2h.flow.export.encryption-enabled:true}")
@@ -25,6 +25,9 @@ public class FlowExportConfiguration {
     
     @Value("${h2h.flow.export.include-metrics:false}")
     private boolean includeMetrics;
+    
+    @Value("${h2h.flow.export.include-package-info:true}")
+    private boolean includePackageInfo;
     
     /**
      * Get the current export format version
@@ -86,6 +89,20 @@ public class FlowExportConfiguration {
     }
     
     /**
+     * Check if package information should be included in exports (V3+ feature)
+     */
+    public boolean isIncludePackageInfo() {
+        return includePackageInfo;
+    }
+    
+    /**
+     * Set whether to include package information in exports (V3+ feature)
+     */
+    public void setIncludePackageInfo(boolean includePackageInfo) {
+        this.includePackageInfo = includePackageInfo;
+    }
+    
+    /**
      * Validate the current configuration
      */
     public void validate() {
@@ -103,5 +120,36 @@ public class FlowExportConfiguration {
      */
     public boolean isValidFormat(String formatToCheck) {
         return format.equals(formatToCheck);
+    }
+    
+    /**
+     * Check if the current format supports package information (V3+)
+     */
+    public boolean supportsPackageInfo() {
+        return format != null && (format.equals("H2H_FLOW_V3") || isNewerThanV3(format));
+    }
+    
+    /**
+     * Check if format is package-aware (V3 or later)
+     */
+    public boolean isPackageAwareFormat(String formatToCheck) {
+        return "H2H_FLOW_V3".equals(formatToCheck) || isNewerThanV3(formatToCheck);
+    }
+    
+    /**
+     * Check if format version is newer than V3
+     */
+    private boolean isNewerThanV3(String formatToCheck) {
+        if (formatToCheck == null || !formatToCheck.startsWith("H2H_FLOW_V")) {
+            return false;
+        }
+        
+        try {
+            String versionPart = formatToCheck.substring("H2H_FLOW_V".length());
+            int version = Integer.parseInt(versionPart);
+            return version > 3;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }

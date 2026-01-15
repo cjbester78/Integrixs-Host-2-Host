@@ -9,7 +9,10 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class FileValidator {
@@ -303,10 +306,356 @@ public class FileValidator {
         
         if (customRules != null) {
             for (Object rule : customRules) {
-                // Custom rule processing would be implemented here
-                // This is a placeholder for extensible validation rules
-                logger.debug("Processing custom validation rule: {}", rule);
+                try {
+                    processCustomValidationRule(rule, filePath, result);
+                } catch (Exception e) {
+                    logger.warn("Failed to process custom validation rule: {} - {}", rule, e.getMessage());
+                    result.addWarning("Custom validation rule failed: " + e.getMessage());
+                }
             }
+        }
+    }
+    
+    /**
+     * Process individual custom validation rule
+     */
+    @SuppressWarnings("unchecked")
+    private void processCustomValidationRule(Object rule, Path filePath, FileValidationResult result) {
+        if (rule instanceof Map) {
+            Map<String, Object> ruleMap = (Map<String, Object>) rule;
+            String ruleType = (String) ruleMap.get("type");
+            
+            if (ruleType == null) {
+                result.addWarning("Custom rule missing 'type' field");
+                return;
+            }
+            
+            logger.debug("Processing custom validation rule type: {} for file: {}", ruleType, filePath);
+            
+            switch (ruleType.toLowerCase()) {
+                case "filename_regex":
+                    validateFilenameRegex(ruleMap, filePath, result);
+                    break;
+                case "file_size_range":
+                    validateFileSizeRange(ruleMap, filePath, result);
+                    break;
+                case "content_contains":
+                    validateContentContains(ruleMap, filePath, result);
+                    break;
+                case "content_excludes":
+                    validateContentExcludes(ruleMap, filePath, result);
+                    break;
+                case "header_validation":
+                    validateFileHeader(ruleMap, filePath, result);
+                    break;
+                case "line_count":
+                    validateLineCount(ruleMap, filePath, result);
+                    break;
+                default:
+                    result.addWarning("Unknown custom validation rule type: " + ruleType);
+            }
+        } else {
+            result.addWarning("Custom validation rule must be a configuration object");
+        }
+    }
+    
+    private void validateFilenameRegex(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        String regex = (String) rule.get("pattern");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "Filename does not match custom pattern");
+        
+        if (regex == null || regex.trim().isEmpty()) {
+            result.addWarning("Filename regex validation rule missing 'pattern' field");
+            return;
+        }
+        
+        try {
+            Pattern pattern = Pattern.compile(regex);
+            String fileName = filePath.getFileName().toString();
+            
+            if (!pattern.matcher(fileName).matches()) {
+                boolean isRequired = Boolean.TRUE.equals(rule.get("required"));
+                String fullMessage = errorMessage + " (pattern: " + regex + ", filename: " + fileName + ")";
+                
+                if (isRequired) {
+                    result.addError(fullMessage);
+                } else {
+                    result.addWarning(fullMessage);
+                }
+            }
+        } catch (java.util.regex.PatternSyntaxException e) {
+            result.addWarning("Invalid regex pattern in custom rule: " + regex + " - " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Error validating filename regex: " + e.getMessage());
+        }
+    }
+    
+    private void validateFileSizeRange(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        Object minSizeObj = rule.get("minSize");
+        Object maxSizeObj = rule.get("maxSize");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "File size not within custom range");
+        
+        if (minSizeObj == null && maxSizeObj == null) {
+            result.addWarning("File size range validation rule missing both 'minSize' and 'maxSize' fields");
+            return;
+        }
+        
+        try {
+            long fileSize = Files.size(filePath);
+            
+            if (minSizeObj != null) {
+                if (!(minSizeObj instanceof Number)) {
+                    result.addWarning("Invalid minSize value in custom rule: " + minSizeObj);
+                    return;
+                }
+                
+                long minSize = ((Number) minSizeObj).longValue();
+                if (minSize < 0) {
+                    result.addWarning("Invalid negative minSize value: " + minSize);
+                    return;
+                }
+                
+                if (fileSize < minSize) {
+                    String sizeMessage = String.format("%s (actual: %d bytes, minimum: %d bytes)", 
+                                                     errorMessage, fileSize, minSize);
+                    result.addError(sizeMessage);
+                }
+            }
+            
+            if (maxSizeObj != null) {
+                if (!(maxSizeObj instanceof Number)) {
+                    result.addWarning("Invalid maxSize value in custom rule: " + maxSizeObj);
+                    return;
+                }
+                
+                long maxSize = ((Number) maxSizeObj).longValue();
+                if (maxSize < 0) {
+                    result.addWarning("Invalid negative maxSize value: " + maxSize);
+                    return;
+                }
+                
+                if (fileSize > maxSize) {
+                    String sizeMessage = String.format("%s (actual: %d bytes, maximum: %d bytes)", 
+                                                     errorMessage, fileSize, maxSize);
+                    result.addError(sizeMessage);
+                }
+            }
+            
+            // Validate that min <= max if both are provided
+            if (minSizeObj != null && maxSizeObj != null) {
+                long minSize = ((Number) minSizeObj).longValue();
+                long maxSize = ((Number) maxSizeObj).longValue();
+                if (minSize > maxSize) {
+                    result.addWarning("Invalid size range: minSize (" + minSize + ") is greater than maxSize (" + maxSize + ")");
+                }
+            }
+            
+        } catch (IOException e) {
+            result.addWarning("Failed to read file size for validation: " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Failed to validate file size range: " + e.getMessage());
+        }
+    }
+    
+    private void validateContentContains(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        String searchText = (String) rule.get("text");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "File content does not contain required text");
+        boolean caseInsensitive = Boolean.TRUE.equals(rule.get("caseInsensitive"));
+        
+        if (searchText == null || searchText.trim().isEmpty()) {
+            result.addWarning("Content contains validation rule missing 'text' field");
+            return;
+        }
+        
+        // Limit file size for content reading to prevent memory issues
+        final long MAX_CONTENT_SIZE = 10 * 1024 * 1024; // 10MB
+        
+        try {
+            long fileSize = Files.size(filePath);
+            if (fileSize > MAX_CONTENT_SIZE) {
+                result.addWarning("File too large for content validation (max 10MB): " + fileSize + " bytes");
+                return;
+            }
+            
+            String content = Files.readString(filePath);
+            String searchContent = caseInsensitive ? content.toLowerCase() : content;
+            String searchTarget = caseInsensitive ? searchText.toLowerCase() : searchText;
+            
+            if (!searchContent.contains(searchTarget)) {
+                String message = String.format("%s: '%s' (case %s)", 
+                                             errorMessage, searchText, 
+                                             caseInsensitive ? "insensitive" : "sensitive");
+                result.addError(message);
+            }
+        } catch (IOException e) {
+            result.addWarning("Failed to read file content for validation: " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Failed to validate content contains: " + e.getMessage());
+        }
+    }
+    
+    private void validateContentExcludes(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        String forbiddenText = (String) rule.get("text");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "File content contains forbidden text");
+        boolean caseInsensitive = Boolean.TRUE.equals(rule.get("caseInsensitive"));
+        
+        if (forbiddenText == null || forbiddenText.trim().isEmpty()) {
+            result.addWarning("Content excludes validation rule missing 'text' field");
+            return;
+        }
+        
+        // Limit file size for content reading to prevent memory issues
+        final long MAX_CONTENT_SIZE = 10 * 1024 * 1024; // 10MB
+        
+        try {
+            long fileSize = Files.size(filePath);
+            if (fileSize > MAX_CONTENT_SIZE) {
+                result.addWarning("File too large for content validation (max 10MB): " + fileSize + " bytes");
+                return;
+            }
+            
+            String content = Files.readString(filePath);
+            String searchContent = caseInsensitive ? content.toLowerCase() : content;
+            String forbiddenTarget = caseInsensitive ? forbiddenText.toLowerCase() : forbiddenText;
+            
+            if (searchContent.contains(forbiddenTarget)) {
+                String message = String.format("%s: '%s' (case %s)", 
+                                             errorMessage, forbiddenText, 
+                                             caseInsensitive ? "insensitive" : "sensitive");
+                result.addError(message);
+            }
+        } catch (IOException e) {
+            result.addWarning("Failed to read file content for validation: " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Failed to validate content excludes: " + e.getMessage());
+        }
+    }
+    
+    private void validateFileHeader(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        String expectedHeader = (String) rule.get("expectedHeader");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "File header does not match expected format");
+        Object linesToCheckObj = rule.get("linesToCheck");
+        
+        if (expectedHeader == null || expectedHeader.trim().isEmpty()) {
+            result.addWarning("Header validation rule missing 'expectedHeader' field");
+            return;
+        }
+        
+        int linesToCheck = 1; // Default to 1 line
+        if (linesToCheckObj != null) {
+            if (linesToCheckObj instanceof Number) {
+                int lines = ((Number) linesToCheckObj).intValue();
+                if (lines > 0 && lines <= 100) { // Reasonable limit
+                    linesToCheck = lines;
+                } else {
+                    result.addWarning("Invalid linesToCheck value (must be 1-100): " + lines);
+                    return;
+                }
+            } else {
+                result.addWarning("Invalid linesToCheck value type: " + linesToCheckObj);
+                return;
+            }
+        }
+        
+        try {
+            List<String> lines = Files.readAllLines(filePath);
+            if (lines.isEmpty()) {
+                result.addError(errorMessage + " - File is empty");
+                return;
+            }
+            
+            StringBuilder headerBuilder = new StringBuilder();
+            int checkLines = Math.min(linesToCheck, lines.size());
+            
+            for (int i = 0; i < checkLines; i++) {
+                if (i > 0) headerBuilder.append("\n");
+                headerBuilder.append(lines.get(i));
+            }
+            
+            String actualHeader = headerBuilder.toString();
+            boolean matches = actualHeader.startsWith(expectedHeader);
+            
+            if (!matches) {
+                // Truncate long headers for error message
+                String displayActual = actualHeader.length() > 100 ? 
+                    actualHeader.substring(0, 100) + "..." : actualHeader;
+                String displayExpected = expectedHeader.length() > 100 ? 
+                    expectedHeader.substring(0, 100) + "..." : expectedHeader;
+                    
+                result.addError(String.format("%s. Expected: '%s', Found: '%s'", 
+                                            errorMessage, displayExpected, displayActual));
+            }
+        } catch (IOException e) {
+            result.addWarning("Failed to read file for header validation: " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Failed to validate file header: " + e.getMessage());
+        }
+    }
+    
+    private void validateLineCount(Map<String, Object> rule, Path filePath, FileValidationResult result) {
+        Object minLinesObj = rule.get("minLines");
+        Object maxLinesObj = rule.get("maxLines");
+        String errorMessage = (String) rule.getOrDefault("errorMessage", "File line count not within expected range");
+        
+        if (minLinesObj == null && maxLinesObj == null) {
+            result.addWarning("Line count validation rule missing both 'minLines' and 'maxLines' fields");
+            return;
+        }
+        
+        try {
+            List<String> lines = Files.readAllLines(filePath);
+            int lineCount = lines.size();
+            
+            if (minLinesObj != null) {
+                if (!(minLinesObj instanceof Number)) {
+                    result.addWarning("Invalid minLines value in custom rule: " + minLinesObj);
+                    return;
+                }
+                
+                int minLines = ((Number) minLinesObj).intValue();
+                if (minLines < 0) {
+                    result.addWarning("Invalid negative minLines value: " + minLines);
+                    return;
+                }
+                
+                if (lineCount < minLines) {
+                    String countMessage = String.format("%s (actual: %d lines, minimum: %d lines)", 
+                                                       errorMessage, lineCount, minLines);
+                    result.addError(countMessage);
+                }
+            }
+            
+            if (maxLinesObj != null) {
+                if (!(maxLinesObj instanceof Number)) {
+                    result.addWarning("Invalid maxLines value in custom rule: " + maxLinesObj);
+                    return;
+                }
+                
+                int maxLines = ((Number) maxLinesObj).intValue();
+                if (maxLines < 0) {
+                    result.addWarning("Invalid negative maxLines value: " + maxLines);
+                    return;
+                }
+                
+                if (lineCount > maxLines) {
+                    String countMessage = String.format("%s (actual: %d lines, maximum: %d lines)", 
+                                                       errorMessage, lineCount, maxLines);
+                    result.addError(countMessage);
+                }
+            }
+            
+            // Validate that min <= max if both are provided
+            if (minLinesObj != null && maxLinesObj != null) {
+                int minLines = ((Number) minLinesObj).intValue();
+                int maxLines = ((Number) maxLinesObj).intValue();
+                if (minLines > maxLines) {
+                    result.addWarning("Invalid line count range: minLines (" + minLines + ") is greater than maxLines (" + maxLines + ")");
+                }
+            }
+            
+        } catch (IOException e) {
+            result.addWarning("Failed to read file for line count validation: " + e.getMessage());
+        } catch (Exception e) {
+            result.addWarning("Failed to validate line count: " + e.getMessage());
         }
     }
     

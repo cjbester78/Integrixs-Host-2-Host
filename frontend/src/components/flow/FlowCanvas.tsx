@@ -7,7 +7,7 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
-  useReactFlow, // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  useReactFlow,  
   reconnectEdge,
   type Node,
   type Edge,
@@ -47,7 +47,6 @@ export interface FlowData {
   id: string
   name: string
   description: string
-  bankName?: string
   nodes: Node[]
   edges: Edge[]
   active: boolean

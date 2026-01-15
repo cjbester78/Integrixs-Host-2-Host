@@ -105,7 +105,7 @@ public class StepExecutionService {
         
         step.setStepConfiguration((Map<String, Object>) node.getOrDefault("config", new HashMap<>()));
         step.setInputData(new HashMap<>(execution.getPayload()));
-        step.setCorrelationId(execution.getCorrelationId());
+        step.setCorrelationId(execution.getCorrelationId() != null ? execution.getCorrelationId() : UUID.randomUUID());
         
         // Save step
         UUID stepId = stepRepository.save(step);

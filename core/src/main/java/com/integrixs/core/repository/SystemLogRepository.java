@@ -3,6 +3,8 @@ package com.integrixs.core.repository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.integrixs.shared.model.SystemLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +28,7 @@ import java.util.UUID;
 @Repository
 public class SystemLogRepository {
     
+    private static final Logger logger = LoggerFactory.getLogger(SystemLogRepository.class);
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
     
@@ -347,7 +350,7 @@ public class SystemLogRepository {
             return jdbcTemplate.query(sql.toString(), systemLogApiRowMapper(), params);
             
         } catch (Exception e) {
-            System.err.println("Error retrieving system logs for API: " + e.getMessage());
+            logger.error("Error retrieving system logs for API", e);
             return List.of();
         }
     }

@@ -79,10 +79,10 @@ public class FileAdapterConfig {
     }
     
     /**
-     * Processing Mode - Test, Archive, Delete, etc.
+     * Post Process Action - ARCHIVE, KEEP_AND_MARK, KEEP_AND_REPROCESS, DELETE
      */
-    public String getProcessingMode() {
-        return getString("processingMode", "Test");
+    public String getPostProcessAction() {
+        return getString("postProcessAction", "ARCHIVE");
     }
     
     /**
@@ -257,7 +257,7 @@ public class FileAdapterConfig {
     }
     
     public String getPostProcessing() {
-        return getString("postProcessing", getProcessingMode()); // Read postProcessing field, fallback to processingMode for backward compatibility
+        return getString("postProcessing", getPostProcessAction()); // Read postProcessing field, fallback to postProcessAction for backward compatibility
     }
     
     public String getArchiveDirectory() {
@@ -418,7 +418,7 @@ public class FileAdapterConfig {
                 "sourceDirectory='" + getSourceDirectory() + '\'' +
                 ", targetDirectory='" + getTargetDirectory() + '\'' +
                 ", filePattern='" + getFilePattern() + '\'' +
-                ", processingMode='" + getProcessingMode() + '\'' +
+                ", postProcessAction='" + getPostProcessAction() + '\'' +
                 ", qualityOfService='" + getQualityOfService() + '\'' +
                 ", fileType='" + getFileType() + '\'' +
                 ", archiveFaultySourceFiles=" + isArchiveFaultySourceFiles() +

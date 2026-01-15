@@ -61,19 +61,20 @@ public class UserController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('ADMINISTRATOR')")
-    public ResponseEntity<List<User>> getAllUsers() {
-        
+    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
+
         UUID currentUserId = getCurrentUserId();
         logger.info("User {} requesting all users", currentUserId);
-        
+
         try {
             List<User> users = userService.findAll();
             logger.info("Retrieved {} users for admin: {}", users.size(), currentUserId);
-            return ResponseEntity.ok(users);
-            
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users));
+
         } catch (Exception e) {
             logger.error("Failed to get all users for user: {}", currentUserId, e);
-            throw new RuntimeException("Failed to retrieve users", e);
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve users"));
         }
     }
 
@@ -210,7 +211,7 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or #id == authentication.principal.id.toString()")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<Map<String, Object>> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
         
         UUID currentUserId = getCurrentUserId();
         UUID userId;
@@ -292,12 +293,13 @@ public class UserController {
             
             logger.info("Updated user: {} by {}", savedUser.getUsername(), currentUser.getUsername());
             
-            // Create response using builder pattern
-            AdminUserResponse response = AdminUserResponse.updatedResponse(
-                savedUser.getId(), "User updated successfully"
+            // Return simple success response
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "User updated successfully"
             );
             
-            return responseService.success(response);
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Failed to update user {} for user: {}", id, currentUserId, e);
@@ -507,39 +509,33 @@ public class UserController {
      * Get current user profile.
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> getCurrentUser() {
-        
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser() {
+
         UUID currentUserId = getCurrentUserId();
-        
-        // Create immutable request DTO
-        AdminUserRequest profileRequest = AdminUserRequest.builder()
-            .operation("get_profile")
-            .requestedBy(currentUserId)
-            .build();
-        
-        // Validate request
-        ExecutionValidationResult validation = validationService.validateUserListRequest(Map.of());
-        if (!validation.isValid()) {
-            throw new IllegalArgumentException("Invalid user profile request: " + String.join(", ", validation.getErrors()));
-        }
-        
+
         try {
             User currentUser = userService.findById(currentUserId).orElseThrow(
                 () -> new IllegalArgumentException("Current user not found")
             );
-            
-            // Create response using builder pattern
-            AdminUserResponse response = AdminUserResponse.detailsResponse(
-                currentUser.getId(), currentUser.getUsername(), currentUser.getEmail(),
-                currentUser.getRole().toString(), currentUser.isEnabled(),
-                currentUser.getCreatedAt(), currentUser.getLastLogin()
+
+            // Create user object for frontend compatibility
+            Map<String, Object> userMap = Map.of(
+                "id", currentUser.getId().toString(),
+                "username", currentUser.getUsername(),
+                "email", currentUser.getEmail(),
+                "fullName", currentUser.getFullName() != null ? currentUser.getFullName() : "",
+                "role", currentUser.getRole().toString()
             );
-            
-            return responseService.success(response);
-            
+
+            // Return response in expected format: { user: {...} }
+            Map<String, Object> response = Map.of("user", userMap);
+
+            return ResponseEntity.ok(ApiResponse.success("User profile retrieved successfully", response));
+
         } catch (Exception e) {
             logger.error("Failed to get current user profile for user: {}", currentUserId, e);
-            throw new RuntimeException("Failed to retrieve user profile", e);
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve user profile"));
         }
     }
 
@@ -548,7 +544,7 @@ public class UserController {
      */
     @PutMapping("/{id}/password")
     @PreAuthorize("hasAuthority('ADMINISTRATOR') or #id == authentication.principal.id.toString()")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> changePassword(@PathVariable String id, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, Object>> changePassword(@PathVariable String id, @RequestBody ChangePasswordRequest request) {
         
         UUID currentUserId = getCurrentUserId();
         UUID userId;
@@ -596,12 +592,13 @@ public class UserController {
             
             logger.info("Password changed for user: {} by {}", user.getUsername(), currentUser.getUsername());
             
-            // Create response using builder pattern
-            AdminUserResponse response = AdminUserResponse.passwordResetResponse(
-                user.getId(), user.getUsername()
+            // Return simple success response
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Password changed successfully"
             );
             
-            return responseService.success(response);
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Failed to change password for user {} for user: {}", id, currentUserId, e);

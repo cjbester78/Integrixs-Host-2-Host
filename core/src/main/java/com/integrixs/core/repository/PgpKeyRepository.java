@@ -304,23 +304,25 @@ public class PgpKeyRepository {
      */
     public void updateExportCount(UUID id) {
         try {
-            String sql = "UPDATE pgp_keys SET exported_count = exported_count + 1, updated_at = ? WHERE id = ?";
-            jdbcTemplate.update(sql, LocalDateTime.now(), id);
-            
+            String sql = "UPDATE pgp_keys SET exported_count = exported_count + 1, updated_at = ?, updated_by = ? WHERE id = ?";
+            UUID updatedBy = getUpdatedByUuid();
+            jdbcTemplate.update(sql, LocalDateTime.now(), updatedBy, id);
+
         } catch (Exception e) {
             logger.error("Error updating export count for PGP key '{}': {}", id, e.getMessage());
         }
     }
-    
+
     /**
      * Update last used timestamp
      */
     public void updateLastUsed(UUID id) {
         try {
-            String sql = "UPDATE pgp_keys SET last_used_at = ?, updated_at = ? WHERE id = ?";
+            String sql = "UPDATE pgp_keys SET last_used_at = ?, updated_at = ?, updated_by = ? WHERE id = ?";
             LocalDateTime now = LocalDateTime.now();
-            jdbcTemplate.update(sql, now, now, id);
-            
+            UUID updatedBy = getUpdatedByUuid();
+            jdbcTemplate.update(sql, now, now, updatedBy, id);
+
         } catch (Exception e) {
             logger.error("Error updating last used timestamp for PGP key '{}': {}", id, e.getMessage());
         }
@@ -436,9 +438,21 @@ public class PgpKeyRepository {
                 if (updatedByStr != null) {
                     pgpKey.setUpdatedBy(UUID.fromString(updatedByStr));
                 }
-                
+
                 return pgpKey;
             }
         };
+    }
+
+    /**
+     * Get current user UUID for updated_by field
+     */
+    private UUID getUpdatedByUuid() {
+        try {
+            String userId = AuditUtils.getCurrentUserId();
+            return UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

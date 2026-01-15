@@ -1,6 +1,8 @@
 package com.integrixs.core.repository;
 
 import com.integrixs.shared.model.TransactionLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @Repository
 public class TransactionLogRepository {
     
+    private static final Logger logger = LoggerFactory.getLogger(TransactionLogRepository.class);
     private final JdbcTemplate jdbcTemplate;
     
     public TransactionLogRepository(JdbcTemplate jdbcTemplate) {
@@ -180,6 +183,14 @@ public class TransactionLogRepository {
     }
     
     /**
+     * Find recent transaction logs for activity feed
+     */
+    public List<TransactionLog> findRecentTransactionLogs(int limit) {
+        String sql = "SELECT * FROM transaction_logs ORDER BY timestamp DESC LIMIT ?";
+        return jdbcTemplate.query(sql, new TransactionLogRowMapper(), limit);
+    }
+
+    /**
      * Delete old logs before a specific timestamp (for log retention)
      */
     public void deleteOldLogs(LocalDateTime before) {
@@ -238,7 +249,7 @@ public class TransactionLogRepository {
             return jdbcTemplate.query(sql.toString(), transactionLogApiRowMapper(), params);
             
         } catch (Exception e) {
-            System.err.println("Error retrieving transaction logs for API: " + e.getMessage());
+            logger.error("Error retrieving transaction logs for API", e);
             return List.of();
         }
     }

@@ -50,10 +50,7 @@ public interface BaseRepository<T> {
      * @param userId the user performing the operation
      * @return the saved/updated entity
      */
-    default T saveOrUpdate(T entity, UUID userId) {
-        // This method will be implemented in the abstract class
-        throw new UnsupportedOperationException("Must be implemented by abstract base class");
-    }
+    T saveOrUpdate(T entity, UUID userId);
     
     /**
      * Delete an entity by ID.

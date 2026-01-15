@@ -83,12 +83,12 @@ export const authApi = {
 export const userApi = {
   getCurrentUser: async () => {
     const response = await api.get('/api/users/me')
-    return response.data
+    return response.data?.data || response.data
   },
-  
+
   getAllUsers: async () => {
     const response = await api.get('/api/users')
-    return response.data
+    return response.data?.data || []
   },
   
   createUser: async (userData: any) => {
@@ -175,6 +175,11 @@ export const configApi = {
 export const adapterApi = {
   getAllAdapters: async () => {
     const response = await api.get('/api/adapters')
+    return response.data
+  },
+  
+  getAdaptersByPackage: async (packageId: string) => {
+    const response = await api.get(`/api/adapters/package/${packageId}`)
     return response.data
   },
   
@@ -467,6 +472,11 @@ export const pgpKeyApi = {
 export const flowApi = {
   getAllFlows: async () => {
     const response = await api.get('/api/flows')
+    return response.data
+  },
+
+  getFlowsByPackage: async (packageId: string) => {
+    const response = await api.get(`/api/flows/package/${packageId}`)
     return response.data
   },
 

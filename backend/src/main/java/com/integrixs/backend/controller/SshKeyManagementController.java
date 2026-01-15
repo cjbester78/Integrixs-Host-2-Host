@@ -1,5 +1,6 @@
 package com.integrixs.backend.controller;
 
+import com.integrixs.backend.dto.ApiResponse;
 import com.integrixs.backend.service.SshKeyManagementService;
 import com.integrixs.shared.model.SshKey;
 import com.integrixs.shared.util.SecurityContextHelper;
@@ -134,30 +135,24 @@ public class SshKeyManagementController {
      * GET /api/ssh-keys
      */
     @GetMapping
-    public ResponseEntity<?> getAllKeys(@RequestParam(value = "enabledOnly", defaultValue = "false") boolean enabledOnly) {
+    public ResponseEntity<ApiResponse<List<SshKeyResponse>>> getAllKeys(@RequestParam(value = "enabledOnly", defaultValue = "false") boolean enabledOnly) {
         log.debug("Retrieving SSH keys - enabledOnly: {}", enabledOnly);
-        
+
         try {
-            List<SshKey> sshKeys = enabledOnly ? 
-                sshKeyManagementService.getEnabledKeys() : 
+            List<SshKey> sshKeys = enabledOnly ?
+                sshKeyManagementService.getEnabledKeys() :
                 sshKeyManagementService.getAllKeys();
-            
+
             List<SshKeyResponse> responses = sshKeys.stream()
                 .map(this::convertToResponse)
                 .toList();
-            
-            // Convert to response format expected by frontend
-            java.util.Map<String, Object> response = new java.util.HashMap<>();
-            response.put("success", true);
-            response.put("data", responses);
-            response.put("timestamp", LocalDateTime.now());
-            
-            return ResponseEntity.ok(response);
-            
+
+            return ResponseEntity.ok(ApiResponse.success("SSH keys retrieved successfully", responses));
+
         } catch (Exception e) {
             log.error("Failed to retrieve SSH keys: {}", e.getMessage(), e);
             return ResponseEntity.status(500)
-                    .body(java.util.Map.of("error", "Failed to retrieve SSH keys"));
+                    .body(ApiResponse.error("Failed to retrieve SSH keys"));
         }
     }
     
@@ -166,22 +161,24 @@ public class SshKeyManagementController {
      * GET /api/ssh-keys/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<SshKeyResponse> getKeyById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<SshKeyResponse>> getKeyById(@PathVariable UUID id) {
         log.debug("Retrieving SSH key - id: {}", id);
-        
+
         try {
             Optional<SshKey> sshKey = sshKeyManagementService.getKeyById(id);
-            
+
             if (sshKey.isPresent()) {
                 SshKeyResponse response = convertToResponse(sshKey.get());
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(ApiResponse.success("SSH key retrieved successfully", response));
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(404)
+                    .body(ApiResponse.error("SSH key not found"));
             }
-            
+
         } catch (Exception e) {
             log.error("Failed to retrieve SSH key {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve SSH key"));
         }
     }
     
@@ -330,13 +327,14 @@ public class SshKeyManagementController {
      * GET /api/ssh-keys/generation-options
      */
     @GetMapping("/generation-options")
-    public ResponseEntity<SshKeyManagementService.KeyGenerationOptions> getGenerationOptions() {
+    public ResponseEntity<ApiResponse<SshKeyManagementService.KeyGenerationOptions>> getGenerationOptions() {
         try {
             SshKeyManagementService.KeyGenerationOptions options = sshKeyManagementService.getGenerationOptions();
-            return ResponseEntity.ok(options);
+            return ResponseEntity.ok(ApiResponse.success("Generation options retrieved successfully", options));
         } catch (Exception e) {
             log.error("Failed to get generation options: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to get generation options"));
         }
     }
     

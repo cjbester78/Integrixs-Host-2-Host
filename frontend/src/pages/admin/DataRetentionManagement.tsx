@@ -6,14 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,28 +21,19 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { 
-  Play, 
-  Trash2, 
-  Plus, 
-  Edit, 
-  Clock, 
-  Database, 
+import {
+  Play,
+  Trash2,
+  Plus,
+  Edit,
+  Clock,
+  Database,
   FileText,
   CheckCircle,
   XCircle,
   AlertTriangle
 } from 'lucide-react';
-
-// Simple toast implementation
-const useToast = () => {
-  const toast = ({ title, description, variant }: { title: string; description: string; variant?: string }) => {
-    const toastType = variant === 'destructive' ? 'error' : 'info';
-    console.log(`[${toastType.toUpperCase()}] ${title}: ${description}`);
-    alert(`${title}: ${description}`);
-  };
-  return { toast };
-};
+import { NotificationModal, NotificationType } from '@/components/ui/NotificationModal';
 
 interface DataRetentionConfig {
   id: string;
@@ -94,8 +85,22 @@ export default function DataRetentionManagement() {
   });
   const [defaultConfigs, setDefaultConfigs] = useState<DataRetentionConfig[]>([]);
   const [availableJobs, setAvailableJobs] = useState<Array<{value: string, label: string, description: string}>>([]);
+  const [notificationModal, setNotificationModal] = useState<{
+    open: boolean;
+    type: NotificationType;
+    title?: string;
+    message: string;
+  }>({ open: false, type: 'info', message: '' });
 
-  const { toast } = useToast();
+  const showNotification = (type: NotificationType, message: string, title?: string) => {
+    setNotificationModal({ open: true, type, title, message });
+  };
+
+  // Toast-compatible wrapper for easier migration
+  const toast = ({ title, description, variant }: { title: string; description: string; variant?: string }) => {
+    const type: NotificationType = variant === 'destructive' ? 'error' : 'success';
+    showNotification(type, description, title);
+  };
 
   // Load configurations and status
   useEffect(() => {
@@ -661,6 +666,15 @@ export default function DataRetentionManagement() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        open={notificationModal.open}
+        onOpenChange={(open) => setNotificationModal(prev => ({ ...prev, open }))}
+        type={notificationModal.type}
+        title={notificationModal.title}
+        message={notificationModal.message}
+      />
     </div>
   );
 }

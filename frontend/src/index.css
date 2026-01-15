@@ -132,7 +132,11 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
   
-  html, body, #root {
+  html, body {
+    @apply h-screen w-full overflow-hidden;
+  }
+
+  #root {
     @apply h-full w-full;
   }
   

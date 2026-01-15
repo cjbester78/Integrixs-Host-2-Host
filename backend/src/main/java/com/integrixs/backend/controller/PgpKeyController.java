@@ -58,13 +58,14 @@ public class PgpKeyController {
     public ResponseEntity<ApiResponse<PgpKey>> getKeyById(@PathVariable UUID id) {
         try {
             Optional<PgpKey> key = pgpKeyService.getKeyById(id);
-            
+
             if (key.isPresent()) {
                 return ResponseEntity.ok(ApiResponse.success(key.get()));
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(404)
+                    .body(ApiResponse.error("PGP key not found"));
             }
-            
+
         } catch (Exception e) {
             logger.error("Failed to retrieve PGP key: {}", id, e);
             return ResponseEntity.internalServerError()

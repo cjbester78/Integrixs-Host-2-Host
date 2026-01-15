@@ -12,16 +12,17 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Pages
 import LoginPage from './pages/auth/LoginPage'
 import { Dashboard } from './pages/Dashboard'
-import AdapterConfiguration from './pages/adapters/AdapterConfiguration'
-import AdapterList from './pages/adapters/AdapterList'
 import CreateSshKey from './pages/ssh-keys/CreateSshKey'
-import FlowManagement from './pages/flows/FlowManagement'
-import VisualFlowBuilder from './pages/flows/VisualFlowBuilder'
 import AdapterMonitoring from './pages/AdapterMonitoring'
 import FlowMonitoring from './pages/FlowMonitoring'
 import ExecutionLogsViewer from './pages/ExecutionLogsViewer'
 import AdminPage from './pages/AdminPage'
 import { Settings } from './pages/Settings'
+import PackageLibrary from './pages/packages/PackageLibrary'
+import CreatePackage from './pages/packages/CreatePackage'
+import EditPackage from './pages/packages/EditPackage'
+import PackageWorkspace from './pages/packages/PackageWorkspace'
+import { PackageProvider } from './contexts/PackageContext'
 
 // Initialize theme on app load
 const initializeTheme = () => {
@@ -66,12 +67,28 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               
-              {/* Adapter management */}
-              <Route path="adapters" element={<AdapterList />} />
-              <Route path="adapters/create" element={<AdapterConfiguration />} />
-              <Route path="adapters/:id/edit" element={<AdapterConfiguration />} />
-              
-              
+              {/* Package management */}
+              <Route path="packages" element={
+                <PackageProvider>
+                  <PackageLibrary />
+                </PackageProvider>
+              } />
+              <Route path="packages/create" element={
+                <PackageProvider>
+                  <CreatePackage />
+                </PackageProvider>
+              } />
+              <Route path="packages/:id/edit" element={
+                <PackageProvider>
+                  <EditPackage />
+                </PackageProvider>
+              } />
+              <Route path="packages/:id" element={
+                <PackageProvider>
+                  <PackageWorkspace />
+                </PackageProvider>
+              } />
+
               {/* Admin page - centralized administration */}
               <Route path="admin" element={<AdminPage />} />
               
@@ -81,12 +98,7 @@ function App() {
               
               {/* User management - redirect to admin */}
               <Route path="users" element={<Navigate to="/admin" replace />} />
-              
-              {/* Flow management (admin only) */}
-              <Route path="flows" element={<FlowManagement />} />
-              <Route path="flows/create" element={<VisualFlowBuilder />} />
-              <Route path="flows/:id/visual" element={<VisualFlowBuilder />} />
-              
+
               {/* Monitoring */}
               <Route path="adapter-monitoring" element={<AdapterMonitoring />} />
               <Route path="flow-monitoring" element={<FlowMonitoring />} />

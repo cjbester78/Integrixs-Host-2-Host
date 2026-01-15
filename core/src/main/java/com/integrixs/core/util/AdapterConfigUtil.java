@@ -144,23 +144,87 @@ public class AdapterConfigUtil {
      */
     public static boolean getBooleanConfig(Map<String, Object> config, String fieldName, boolean defaultValue) {
         Object value = config.get(fieldName);
-        
+
         if (value == null) {
             return defaultValue;
         }
-        
+
         if (value instanceof Boolean) {
             return (Boolean) value;
         }
-        
+
         if (value instanceof String) {
             return Boolean.parseBoolean((String) value);
         }
-        
+
         logger.warn("Configuration field '{}' is not a boolean, using default: {}", fieldName, defaultValue);
         return defaultValue;
     }
-    
+
+    /**
+     * Get integer configuration value (simplified version without required flag).
+     *
+     * @param config The configuration map
+     * @param fieldName The field name
+     * @param defaultValue Default value if field is not present
+     * @return The configuration value
+     */
+    public static int getIntConfig(Map<String, Object> config, String fieldName, int defaultValue) {
+        Object value = config.get(fieldName);
+
+        if (value == null) {
+            return defaultValue;
+        }
+
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                logger.warn("Configuration field '{}' is not a valid integer, using default: {}", fieldName, defaultValue);
+                return defaultValue;
+            }
+        }
+
+        logger.warn("Configuration field '{}' is not a number, using default: {}", fieldName, defaultValue);
+        return defaultValue;
+    }
+
+    /**
+     * Get long configuration value with validation.
+     *
+     * @param config The configuration map
+     * @param fieldName The field name
+     * @param defaultValue Default value if field is not present
+     * @return The configuration value
+     */
+    public static long getLongConfig(Map<String, Object> config, String fieldName, long defaultValue) {
+        Object value = config.get(fieldName);
+
+        if (value == null) {
+            return defaultValue;
+        }
+
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                logger.warn("Configuration field '{}' is not a valid long, using default: {}", fieldName, defaultValue);
+                return defaultValue;
+            }
+        }
+
+        logger.warn("Configuration field '{}' is not a number, using default: {}", fieldName, defaultValue);
+        return defaultValue;
+    }
+
     /**
      * Validate SFTP-specific configuration fields.
      * 

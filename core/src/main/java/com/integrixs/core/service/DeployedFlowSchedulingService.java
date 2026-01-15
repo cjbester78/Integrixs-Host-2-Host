@@ -44,7 +44,8 @@ public class DeployedFlowSchedulingService {
     private final AdapterExecutionService adapterExecutionService;
     private final SystemConfigurationRepository configRepository;
     private final ThreadPoolTaskScheduler taskScheduler;
-    
+    private final java.util.concurrent.Executor adapterExecutor;
+
     // Track scheduled tasks for each deployment
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> scheduledAdapterTasks = new ConcurrentHashMap<>();
     
@@ -57,13 +58,16 @@ public class DeployedFlowSchedulingService {
                                        AdapterRepository adapterRepository,
                                        FlowExecutionService flowExecutionService,
                                        AdapterExecutionService adapterExecutionService,
-                                       SystemConfigurationRepository configRepository) {
+                                       SystemConfigurationRepository configRepository,
+                                       @org.springframework.beans.factory.annotation.Qualifier("adapterTaskExecutor")
+                                       java.util.concurrent.Executor adapterExecutor) {
         this.deployedFlowRepository = deployedFlowRepository;
         this.flowExecutionRepository = flowExecutionRepository;
         this.adapterRepository = adapterRepository;
         this.flowExecutionService = flowExecutionService;
         this.adapterExecutionService = adapterExecutionService;
         this.configRepository = configRepository;
+        this.adapterExecutor = adapterExecutor;
         this.taskScheduler = createTaskScheduler();
     }
     
@@ -179,15 +183,26 @@ public class DeployedFlowSchedulingService {
     }
     
     /**
-     * Start sender adapter with polling schedule
+     * Start sender adapter with polling schedule.
+     * CRITICAL: Synchronized on deployment ID to prevent race conditions.
      */
-    private void startSenderAdapter(DeployedFlow deployedFlow) {
+    private synchronized void startSenderAdapter(DeployedFlow deployedFlow) {
         UUID senderAdapterId = deployedFlow.getSenderAdapterId();
-        
-        logger.info("Starting sender adapter: {} for deployment: {}", 
-                   senderAdapterId, deployedFlow.getId());
-        
-        try {
+        UUID deploymentId = deployedFlow.getId();
+
+        logger.info("Starting sender adapter: {} for deployment: {}",
+                   senderAdapterId, deploymentId);
+
+        // CRITICAL: Check if this deployment already has a scheduled task
+        // Synchronized method ensures no race condition during check-then-act
+        ScheduledFuture<?> existingTask = scheduledAdapterTasks.get(deploymentId);
+        if (existingTask != null && !existingTask.isCancelled() && !existingTask.isDone()) {
+            logger.info("Sender adapter {} for deployment {} is already scheduled, skipping duplicate scheduling",
+                       senderAdapterId, deploymentId);
+            return;
+        }
+
+        try{
             // Get sender adapter configuration
             Optional<Adapter> adapterOpt = adapterRepository.findById(senderAdapterId);
             if (adapterOpt.isEmpty()) {
@@ -206,10 +221,10 @@ public class DeployedFlowSchedulingService {
             }
             
             logger.info("Starting sender adapter {} for deployment", senderAdapterId);
-            
-            // Get scheduler configuration from snapshot configuration
-            Map<String, Object> snapshotAdapterConfig = deployedFlow.getSenderAdapterConfig();
-            SchedulerConfig schedulerConfig = new SchedulerConfig(snapshotAdapterConfig);
+
+            // Get scheduler configuration from the adapter (read dynamically, not from snapshot)
+            Map<String, Object> adapterConfig = senderAdapter.getConfiguration();
+            SchedulerConfig schedulerConfig = new SchedulerConfig(adapterConfig);
             
             logger.info("Scheduling sender adapter {} with scheduler config: {} - {} mode", 
                        senderAdapterId, schedulerConfig.getScheduleType(), schedulerConfig.getScheduleMode());
@@ -397,28 +412,51 @@ public class DeployedFlowSchedulingService {
     }
     
     /**
-     * Schedule a task using comprehensive scheduler configuration
+     * Schedule a task using comprehensive scheduler configuration.
+     * CRITICAL: No fallback scheduling - adapter must have valid scheduler config or it will not run.
+     * This is required for compliance - scheduled execution times are approved by all parties.
      */
     private ScheduledFuture<?> scheduleWithSchedulerConfig(Runnable task, SchedulerConfig schedulerConfig) {
         String scheduleType = schedulerConfig.getScheduleType();
         String scheduleMode = schedulerConfig.getScheduleMode();
-        
-        try {
-            if ("OnTime".equals(scheduleMode)) {
-                // Schedule for specific time based on schedule type
-                return scheduleAtSpecificTime(task, schedulerConfig);
-            } else if ("Every".equals(scheduleMode)) {
-                // Schedule with interval within time range
-                return scheduleWithInterval(task, schedulerConfig);
-            } else {
-                logger.warn("Unknown schedule mode: {}, falling back to every 5 minutes", scheduleMode);
-                return taskScheduler.scheduleWithFixedDelay(task, 300000); // 5 minutes
-            }
-        } catch (Exception e) {
-            logger.error("Failed to schedule with scheduler config: {}", e.getMessage(), e);
-            logger.warn("Falling back to every 5 minutes");
-            return taskScheduler.scheduleWithFixedDelay(task, 300000); // 5 minutes
+
+        // Validate scheduler configuration - no fallbacks allowed
+        if (scheduleMode == null || scheduleMode.trim().isEmpty()) {
+            throw new IllegalStateException("Scheduler configuration missing: scheduleMode is required. " +
+                "Adapter cannot be scheduled without valid scheduler configuration.");
         }
+
+        if (!"OnTime".equals(scheduleMode) && !"Every".equals(scheduleMode)) {
+            throw new IllegalStateException("Invalid scheduleMode: '" + scheduleMode + "'. " +
+                "Must be 'OnTime' or 'Every'. Adapter cannot be scheduled with invalid configuration.");
+        }
+
+        if ("OnTime".equals(scheduleMode)) {
+            // Validate OnTime specific config
+            String onTimeValue = schedulerConfig.getOnTimeValue();
+            if (onTimeValue == null || onTimeValue.trim().isEmpty()) {
+                throw new IllegalStateException("Scheduler configuration missing: onTimeValue is required for OnTime mode.");
+            }
+            logger.info("Scheduling OnTime execution for {} at {}", scheduleType, onTimeValue);
+            return scheduleAtSpecificTime(task, schedulerConfig);
+
+        } else if ("Every".equals(scheduleMode)) {
+            // Validate Every specific config
+            String everyInterval = schedulerConfig.getEveryInterval();
+            if (everyInterval == null || everyInterval.trim().isEmpty()) {
+                throw new IllegalStateException("Scheduler configuration missing: everyInterval is required for Every mode.");
+            }
+            long intervalMs = parseIntervalToMilliseconds(everyInterval);
+            if (intervalMs <= 0) {
+                throw new IllegalStateException("Invalid everyInterval: '" + everyInterval + "'. " +
+                    "Could not parse to valid interval.");
+            }
+            logger.info("Scheduling Every execution with interval: {}ms ({})", intervalMs, everyInterval);
+            return scheduleWithInterval(task, schedulerConfig);
+        }
+
+        // This should never be reached due to validation above
+        throw new IllegalStateException("Unexpected scheduling error - no valid schedule mode configured.");
     }
     
     /**
@@ -427,14 +465,14 @@ public class DeployedFlowSchedulingService {
     private ScheduledFuture<?> scheduleAtSpecificTime(Runnable task, SchedulerConfig schedulerConfig) {
         // For now, implement as fixed rate every minute and check time during execution
         // This is a simplified implementation - a full implementation would use cron expressions
-        logger.info("Scheduling OnTime execution for {} at {}", 
+        logger.info("Scheduling OnTime execution for {} at {}",
                    schedulerConfig.getScheduleType(), schedulerConfig.getOnTimeValue());
-        
-        return taskScheduler.scheduleWithFixedDelay(() -> {
+
+        return taskScheduler.scheduleAtFixedRate(() -> {
             if (shouldExecuteAtTime(schedulerConfig)) {
                 task.run();
             }
-        }, 60000); // Check every minute
+        }, java.time.Duration.ofMinutes(1)); // Check every minute
     }
     
     /**
@@ -442,14 +480,30 @@ public class DeployedFlowSchedulingService {
      */
     private ScheduledFuture<?> scheduleWithInterval(Runnable task, SchedulerConfig schedulerConfig) {
         long intervalMs = parseIntervalToMilliseconds(schedulerConfig.getEveryInterval());
-        
+
+        logger.info("SCHEDULER DEBUG: About to schedule with intervalMs = {}ms", intervalMs);
         logger.info("Scheduling Every execution with interval: {}ms", intervalMs);
-        
-        return taskScheduler.scheduleWithFixedDelay(() -> {
+
+        // Use scheduleAtFixedRate for consistent interval execution
+        // This ensures tasks start at fixed intervals regardless of execution time
+        // Wrap task in adapterExecutor to allow concurrent executions
+        ScheduledFuture<?> future = taskScheduler.scheduleAtFixedRate(() -> {
+            logger.info("SCHEDULER DEBUG: Task triggered at {}", java.time.LocalDateTime.now());
             if (shouldExecuteInTimeRange(schedulerConfig)) {
-                task.run();
+                // Execute task asynchronously in thread pool to allow concurrency
+                adapterExecutor.execute(() -> {
+                    try {
+                        logger.info("SCHEDULER DEBUG: Task executing in thread: {}", Thread.currentThread().getName());
+                        task.run();
+                    } catch (Exception e) {
+                        logger.error("Error executing adapter task: {}", e.getMessage(), e);
+                    }
+                });
             }
-        }, intervalMs);
+        }, java.time.Duration.ofMillis(intervalMs));
+
+        logger.info("SCHEDULER DEBUG: Scheduled future created successfully");
+        return future;
     }
     
     /**
@@ -471,68 +525,110 @@ public class DeployedFlowSchedulingService {
     }
     
     /**
-     * Convert interval string to milliseconds
+     * Convert interval string to milliseconds.
+     * CRITICAL: No fallbacks - invalid or missing configuration must fail loudly.
+     * The scheduler MUST use only database-supplied configuration values.
      */
     private long parseIntervalToMilliseconds(String interval) {
-        if (interval == null) return 60000; // Default 1 minute
-        
+        logger.info("SCHEDULER DEBUG: Parsing interval: '{}'", interval);
+
+        // CRITICAL: No fallback for null - configuration is required
+        if (interval == null || interval.trim().isEmpty()) {
+            throw new IllegalStateException(
+                "Scheduler configuration error: everyInterval is required but not found in adapter configuration. " +
+                "Please configure the adapter with a valid interval (e.g., '1 min', '30 sec', '2 hour').");
+        }
+
         try {
             if (interval.endsWith(" sec")) {
-                int seconds = Integer.parseInt(interval.replace(" sec", ""));
-                return seconds * 1000L;
+                int seconds = Integer.parseInt(interval.replace(" sec", "").trim());
+                if (seconds <= 0) {
+                    throw new IllegalStateException("Interval must be positive: " + interval);
+                }
+                long result = seconds * 1000L;
+                logger.info("SCHEDULER DEBUG: Parsed '{}' as {} seconds = {}ms", interval, seconds, result);
+                return result;
             } else if (interval.endsWith(" min")) {
-                int minutes = Integer.parseInt(interval.replace(" min", ""));
-                return minutes * 60000L;
+                int minutes = Integer.parseInt(interval.replace(" min", "").trim());
+                if (minutes <= 0) {
+                    throw new IllegalStateException("Interval must be positive: " + interval);
+                }
+                long result = minutes * 60000L;
+                logger.info("SCHEDULER DEBUG: Parsed '{}' as {} minutes = {}ms", interval, minutes, result);
+                return result;
             } else if (interval.endsWith(" hour") || interval.endsWith(" hours")) {
-                int hours = Integer.parseInt(interval.replace(" hour", "").replace(" hours", ""));
-                return hours * 3600000L;
+                int hours = Integer.parseInt(interval.replace(" hour", "").replace(" hours", "").trim());
+                if (hours <= 0) {
+                    throw new IllegalStateException("Interval must be positive: " + interval);
+                }
+                long result = hours * 3600000L;
+                logger.info("SCHEDULER DEBUG: Parsed '{}' as {} hours = {}ms", interval, hours, result);
+                return result;
             }
         } catch (NumberFormatException e) {
-            logger.warn("Failed to parse interval '{}', using default 1 minute", interval);
+            throw new IllegalStateException(
+                "Scheduler configuration error: Invalid interval format '" + interval + "'. " +
+                "Expected format: '<number> sec', '<number> min', or '<number> hour'. " +
+                "Example: '1 min', '30 sec', '2 hour'", e);
         }
-        
-        return 60000; // Default 1 minute
+
+        // CRITICAL: No fallback for unrecognized format - must fail
+        throw new IllegalStateException(
+            "Scheduler configuration error: Unrecognized interval format '" + interval + "'. " +
+            "Expected format: '<number> sec', '<number> min', or '<number> hour'. " +
+            "Example: '1 min', '30 sec', '2 hour'");
     }
     
     /**
-     * Wrapper class for scheduler configuration
+     * Wrapper class for scheduler configuration.
+     * CRITICAL: No defaults for required fields - missing config must fail validation.
      */
     private static class SchedulerConfig {
         private final Map<String, Object> config;
-        
+
         public SchedulerConfig(Map<String, Object> config) {
             this.config = config != null ? config : new HashMap<>();
         }
-        
+
+        // Required field - no default (must be explicitly configured)
         public String getScheduleType() {
-            return getString("scheduleType", "Daily");
+            return getString("scheduleType");
         }
-        
+
+        // Required field - no default (must be explicitly configured)
         public String getScheduleMode() {
-            return getString("scheduleMode", "OnTime");
+            return getString("scheduleMode");
         }
-        
+
+        // Required for OnTime mode - no default
         public String getOnTimeValue() {
-            return getString("onTimeValue", "20:27");
+            return getString("onTimeValue");
         }
-        
+
+        // Required for Every mode - no default
         public String getEveryInterval() {
-            return getString("everyInterval", "1 min");
+            return getString("everyInterval");
         }
-        
+
+        // Optional with sensible defaults for time range
         public String getEveryStartTime() {
-            return getString("everyStartTime", "00:00");
+            return getStringWithDefault("everyStartTime", "00:00");
         }
-        
+
         public String getEveryEndTime() {
-            return getString("everyEndTime", "24:00");
+            return getStringWithDefault("everyEndTime", "23:59");
         }
-        
+
         public String getTimeZone() {
-            return getString("timeZone", "UTC 0:00");
+            return getStringWithDefault("timeZone", "UTC 0:00");
         }
-        
-        private String getString(String key, String defaultValue) {
+
+        private String getString(String key) {
+            Object value = config.get(key);
+            return value != null ? value.toString() : null;
+        }
+
+        private String getStringWithDefault(String key, String defaultValue) {
             Object value = config.get(key);
             return value != null ? value.toString() : defaultValue;
         }
@@ -556,7 +652,27 @@ public class DeployedFlowSchedulingService {
      */
     private int getCurrentRunningExecutions(UUID deploymentId) {
         Set<UUID> runningExecutions = runningExecutionsByFlow.get(deploymentId);
-        return runningExecutions != null ? runningExecutions.size() : 0;
+        if (runningExecutions == null || runningExecutions.isEmpty()) {
+            return 0;
+        }
+
+        // CRITICAL FIX: Verify executions are actually still running in database
+        // Don't rely on stale in-memory tracking that waits 5 minutes for cleanup
+        try {
+            List<FlowExecution> stillRunning = flowExecutionRepository.findRunningExecutions();
+            Set<UUID> stillRunningIds = new HashSet<>();
+            for (FlowExecution execution : stillRunning) {
+                stillRunningIds.add(execution.getId());
+            }
+
+            // Remove completed executions from tracking immediately
+            runningExecutions.removeIf(executionId -> !stillRunningIds.contains(executionId));
+
+            return runningExecutions.size();
+        } catch (Exception e) {
+            logger.warn("Error checking running executions, using cached count: {}", e.getMessage());
+            return runningExecutions.size(); // Fallback to cached count on error
+        }
     }
     
     /**

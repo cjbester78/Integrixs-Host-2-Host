@@ -96,8 +96,8 @@ const ParallelSplitNode: React.FC<NodeProps<ParallelSplitNodeType>> = ({
       />
 
       {/* Output Handles (right point of diamond) */}
-      {/* @ts-ignore - index is used for positioning in drag operations */}
-      {outputPositions.map((pos, index) => ( // index is used for positioning
+      {/* @ts-expect-error - index is used for positioning in drag operations */}
+      {outputPositions.map((pos, _index) => ( // index is used for positioning
         <Handle
           key={pos.id}
           type="source"

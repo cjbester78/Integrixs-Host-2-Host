@@ -253,13 +253,15 @@ public class FlowUtilityRepository {
         String sql = """
             UPDATE flow_utilities SET
                 configuration_schema = ?::jsonb,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, convertMapToJson(configurationSchema), LocalDateTime.now(), id);
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, convertMapToJson(configurationSchema), LocalDateTime.now(), updatedBy, id);
     }
-    
+
     /**
      * Update utility default configuration
      */
@@ -267,13 +269,15 @@ public class FlowUtilityRepository {
         String sql = """
             UPDATE flow_utilities SET
                 default_configuration = ?::jsonb,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, convertMapToJson(defaultConfiguration), LocalDateTime.now(), id);
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, convertMapToJson(defaultConfiguration), LocalDateTime.now(), updatedBy, id);
     }
-    
+
     /**
      * Set utility active status
      */
@@ -281,11 +285,13 @@ public class FlowUtilityRepository {
         String sql = """
             UPDATE flow_utilities SET
                 active = ?,
-                updated_at = ?
+                updated_at = ?,
+                updated_by = ?
             WHERE id = ?
         """;
-        
-        jdbcTemplate.update(sql, active, LocalDateTime.now(), id);
+
+        UUID updatedBy = getUpdatedByUuid();
+        jdbcTemplate.update(sql, active, LocalDateTime.now(), updatedBy, id);
     }
     
     /**
@@ -426,6 +432,18 @@ public class FlowUtilityRepository {
             return map;
         } catch (Exception e) {
             return new java.util.HashMap<>();
+        }
+    }
+
+    /**
+     * Get current user UUID for updated_by field
+     */
+    private UUID getUpdatedByUuid() {
+        try {
+            String userId = AuditUtils.getCurrentUserId();
+            return UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 }

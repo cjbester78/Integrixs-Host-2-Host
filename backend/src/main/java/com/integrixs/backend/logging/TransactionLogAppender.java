@@ -91,17 +91,30 @@ public class TransactionLogAppender extends UnsynchronizedAppenderBase<ILoggingE
      */
     private String determineCategory(String loggerName, String message) {
         // Authentication logs
-        if (loggerName.contains("AuthenticationLogger") || loggerName.contains("AuthenticationEventListener")) {
-            if (message.contains("SUCCESS")) return "AUTH_SUCCESS";
-            if (message.contains("FAILED")) return "AUTH_FAILED";
-            if (message.contains("ATTEMPT")) return "AUTH_ATTEMPT";
-            if (message.contains("LOGOUT")) return "LOGOUT";
-            return "AUTHENTICATION";
+        if (loggerName.contains("AuthenticationLogger") || loggerName.contains("AuthenticationEventListener")
+            || loggerName.contains("authentication") || message.toLowerCase().contains("auth")) {
+            if (message.contains("SUCCESS") || message.contains("success")) return "AUTH_SUCCESS";
+            if (message.contains("FAILED") || message.contains("failed") || message.contains("error")) return "AUTH_FAILED";
+            if (message.contains("ATTEMPT") || message.contains("attempt") || message.contains("login")) return "AUTH_ATTEMPT";
+            if (message.contains("LOGOUT") || message.contains("logout")) return "LOGOUT";
+            return "AUTH_ATTEMPT"; // Default for auth-related logs
         }
         
-        // File processing logs
+        // File processing logs - map to specific file categories
         if (loggerName.contains("file") || message.toLowerCase().contains("file")) {
-            return "FILE_PROCESSING";
+            if (message.toLowerCase().contains("inbound") || message.toLowerCase().contains("received") || message.toLowerCase().contains("upload")) {
+                return "FILE_INBOUND";
+            }
+            if (message.toLowerCase().contains("outbound") || message.toLowerCase().contains("sent") || message.toLowerCase().contains("download")) {
+                return "FILE_OUTBOUND";
+            }
+            if (message.toLowerCase().contains("archived") || message.toLowerCase().contains("archive")) {
+                return "FILE_ARCHIVED";
+            }
+            if (message.toLowerCase().contains("error") || message.toLowerCase().contains("failed")) {
+                return "FILE_ERROR";
+            }
+            return "FILE_INBOUND"; // Default for file logs
         }
         
         // Adapter logs
@@ -109,18 +122,18 @@ public class TransactionLogAppender extends UnsynchronizedAppenderBase<ILoggingE
             return "ADAPTER_EXECUTION";
         }
         
-        // Flow logs
+        // Flow logs - map to adapter execution
         if (loggerName.contains("flow")) {
-            return "FLOW_EXECUTION";
+            return "ADAPTER_EXECUTION";
         }
         
-        // Security logs
+        // Security logs - map to auth logs
         if (loggerName.contains("security")) {
-            return "SECURITY";
+            return "AUTH_ATTEMPT";
         }
         
-        // Default
-        return "APPLICATION";
+        // Default - map to adapter execution for general application logs
+        return "ADAPTER_EXECUTION";
     }
 
     /**

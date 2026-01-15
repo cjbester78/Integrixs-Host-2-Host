@@ -254,7 +254,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                     <SelectContent>
                       {availableAdapters.map((adapter: any) => (
                         <SelectItem key={adapter.id} value={adapter.id}>
-                          {adapter.name} - {adapter.adapterType} ({adapter.bank || 'No Bank'})
+                          {adapter.name} - {adapter.adapterType}
                         </SelectItem>
                       ))}
                     </SelectContent>

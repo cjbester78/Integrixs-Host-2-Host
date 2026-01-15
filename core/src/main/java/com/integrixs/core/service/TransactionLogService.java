@@ -146,6 +146,27 @@ public class TransactionLogService {
     }
     
     /**
+     * Get recent transaction logs for activity feed
+     */
+    public List<TransactionLog> getRecentTransactionLogs(int limit) {
+        return repository.findRecentTransactionLogs(limit);
+    }
+    
+    /**
+     * Get transaction logs by category
+     */
+    public List<TransactionLog> getTransactionLogsByCategory(String category, int limit) {
+        return findByCategory(category, limit);
+    }
+    
+    /**
+     * Get adapter transaction logs
+     */
+    public List<TransactionLog> getAdapterTransactionLogs(UUID adapterId, int limit) {
+        return findByAdapterId(adapterId, limit);
+    }
+
+    /**
      * Count authentication failures for a username within a time period
      */
     public long countAuthenticationFailuresByUsername(String username, Duration duration) {

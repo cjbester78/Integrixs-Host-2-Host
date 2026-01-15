@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * 
  * SFTP SENDER flow:
  * 1. Connect to remote SFTP server (host/port/auth)
- * 2. Download files from remoteDirectory matching filePattern  
+ * 2. Download files from sourceDirectory matching filePattern  
  * 3. Archive files to archiveDirectory on remote server (optional)
  * 4. Store file content in context for receiver processing
  */
@@ -65,12 +65,12 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
         validateSftpSenderConfiguration(config);
         
         String filePattern = AdapterConfigUtil.getStringConfig(config, "filePattern", false, "*");
-        String remoteDirectory = AdapterConfigUtil.getStringConfig(config, "remoteDirectory", true, null);
+        String sourceDirectory = AdapterConfigUtil.getStringConfig(config, "sourceDirectory", true, null);
         String postProcessAction = AdapterConfigUtil.getStringConfig(config, "postProcessAction", false, "ARCHIVE");
         String archiveDirectory = AdapterConfigUtil.getStringConfig(config, "archiveDirectory", false, null);
         
-        logger.info("Configuration - Remote Directory: {}, File Pattern: {}, Post Process Action: {}", 
-                   remoteDirectory, filePattern, postProcessAction);
+        logger.info("Configuration - Source Directory: {}, File Pattern: {}, Post Process Action: {}", 
+                   sourceDirectory, filePattern, postProcessAction);
         
         ChannelSftp sftpChannel = null;
         
@@ -83,7 +83,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
             
             // List files in remote directory matching pattern
             @SuppressWarnings("unchecked")
-            Vector<ChannelSftp.LsEntry> remoteFiles = sftpChannel.ls(remoteDirectory);
+            Vector<ChannelSftp.LsEntry> remoteFiles = sftpChannel.ls(sourceDirectory);
             
             List<ChannelSftp.LsEntry> matchingFiles = remoteFiles.stream()
                 .filter(entry -> !entry.getAttrs().isDir() && 
@@ -91,7 +91,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
                 .collect(Collectors.toList());
             
             if (matchingFiles.isEmpty()) {
-                logger.info("No files found matching pattern '{}' in remote directory '{}'", filePattern, remoteDirectory);
+                logger.info("No files found matching pattern '{}' in remote directory '{}'", filePattern, sourceDirectory);
                 return createSuccessResult(0, 0, 0L, "No files found to download");
             }
             
@@ -105,7 +105,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
             
             for (ChannelSftp.LsEntry fileEntry : matchingFiles) {
                 String fileName = fileEntry.getFilename();
-                String remoteFilePath = remoteDirectory + "/" + fileName;
+                String remoteFilePath = sourceDirectory + "/" + fileName;
                 
                 try {
                     // Download file content from SFTP server
@@ -161,7 +161,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
             
             result.put("foundFiles", processedFiles);
             result.put("filePattern", filePattern);
-            result.put("remoteDirectory", remoteDirectory);
+            result.put("sourceDirectory", sourceDirectory);
             result.put("postProcessAction", postProcessAction);
             result.put("archiveDirectory", archiveDirectory);
             result.put("filesDiscovered", matchingFiles.size());
@@ -212,14 +212,17 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
                             if (config.containsKey("compressionType")) {
                                 String compressionType = AdapterConfigUtil.getStringConfig(config, "compressionType", false, "NONE");
                                 if (!"NONE".equalsIgnoreCase(compressionType)) {
-                                    // For remote SFTP files, compression would require downloading, compressing, and re-uploading
-                                    // This is complex for remote files, so log a note about it
-                                    logger.info("Note: Compression type '{}' specified but not implemented for remote SFTP files. File archived without compression.", compressionType);
+                                    // Implement compression for remote SFTP files
+                                    archiveFilePath = compressRemoteFile(sftpChannel, remoteFilePath, archiveFilePath, compressionType);
+                                    logger.info("✓ Compressed and archived remote file: {} -> {} ({})", remoteFilePath, archiveFilePath, compressionType);
+                                } else {
+                                    sftpChannel.rename(remoteFilePath, archiveFilePath);
+                                    logger.info("✓ Archived remote file: {} -> {}", remoteFilePath, archiveFilePath);
                                 }
+                            } else {
+                                sftpChannel.rename(remoteFilePath, archiveFilePath);
+                                logger.info("✓ Archived remote file: {} -> {}", remoteFilePath, archiveFilePath);
                             }
-                            
-                            sftpChannel.rename(remoteFilePath, archiveFilePath);
-                            logger.info("✓ Archived remote file: {} -> {}", remoteFilePath, archiveFilePath);
                         } else {
                             logger.warn("Archive directory configured but empty, file remains in original location: {}", remoteFilePath);
                         }
@@ -322,7 +325,7 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
         // SFTP sender needs connection details
         AdapterConfigUtil.validateRequiredString(config, "host", adapterType);
         AdapterConfigUtil.validateRequiredString(config, "username", adapterType);
-        AdapterConfigUtil.validateRequiredString(config, "remoteDirectory", adapterType);
+        AdapterConfigUtil.validateRequiredString(config, "sourceDirectory", adapterType);
         
         // Validate port if present
         Integer port = AdapterConfigUtil.getIntegerConfig(config, "port", false, 22);
@@ -443,5 +446,213 @@ public class SftpSenderAdapter extends AbstractAdapterExecutor {
         }
         
         return enhancedConfig;
+    }
+    
+    /**
+     * Compress remote file via SFTP
+     */
+    private String compressRemoteFile(ChannelSftp sftpChannel, String sourceFile, String targetPath, String compressionType) throws Exception {
+        if (compressionType == null || compressionType.trim().isEmpty()) {
+            throw new IllegalArgumentException("Compression type cannot be null or empty");
+        }
+        
+        // Create unique temporary local files using UUID to avoid collisions
+        String tempDir = System.getProperty("java.io.tmpdir");
+        String uniqueId = java.util.UUID.randomUUID().toString();
+        String tempSourceFile = tempDir + "/sftp_source_" + uniqueId;
+        String tempCompressedFile = tempDir + "/sftp_compressed_" + uniqueId;
+        
+        // Verify source file exists on remote server
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.Vector<ChannelSftp.LsEntry> files = sftpChannel.ls(sourceFile);
+            if (files.isEmpty()) {
+                throw new java.io.FileNotFoundException("Source file does not exist on remote server: " + sourceFile);
+            }
+        } catch (com.jcraft.jsch.SftpException e) {
+            throw new java.io.FileNotFoundException("Source file does not exist on remote server: " + sourceFile);
+        }
+        
+        try {
+            logger.debug("Starting compression of remote file: {} using {}", sourceFile, compressionType);
+            
+            // Download file to temporary location
+            sftpChannel.get(sourceFile, tempSourceFile);
+            logger.debug("Downloaded remote file to temporary location: {}", tempSourceFile);
+            
+            // Verify download was successful
+            java.io.File tempFile = new java.io.File(tempSourceFile);
+            if (!tempFile.exists() || tempFile.length() == 0) {
+                throw new java.io.IOException("Failed to download file or file is empty: " + sourceFile);
+            }
+            
+            // Compress the file based on type
+            String compressedExtension = getCompressionExtension(compressionType);
+            String finalTargetPath = targetPath;
+            if (!finalTargetPath.toLowerCase().endsWith(compressedExtension)) {
+                finalTargetPath += compressedExtension;
+            }
+            
+            switch (compressionType.toUpperCase()) {
+                case "GZIP":
+                case "GZ":
+                    compressFileGzip(tempSourceFile, tempCompressedFile);
+                    logger.debug("GZIP compression completed for: {}", sourceFile);
+                    break;
+                case "ZIP":
+                    String entryName = new java.io.File(sourceFile).getName();
+                    compressFileZip(tempSourceFile, tempCompressedFile, entryName);
+                    logger.debug("ZIP compression completed for: {}", sourceFile);
+                    break;
+                default:
+                    logger.warn("Unsupported compression type: {}, archiving without compression", compressionType);
+                    sftpChannel.rename(sourceFile, targetPath);
+                    return targetPath;
+            }
+            
+            // Verify compressed file was created successfully
+            java.io.File compressedFile = new java.io.File(tempCompressedFile);
+            if (!compressedFile.exists() || compressedFile.length() == 0) {
+                throw new java.io.IOException("Compression failed - compressed file not created or empty");
+            }
+            
+            // Upload compressed file to final destination
+            sftpChannel.put(tempCompressedFile, finalTargetPath);
+            logger.debug("Uploaded compressed file to: {}", finalTargetPath);
+            
+            // Verify upload was successful before removing original
+            try {
+                @SuppressWarnings("unchecked")
+                java.util.Vector<ChannelSftp.LsEntry> uploadedFiles = sftpChannel.ls(finalTargetPath);
+                if (uploadedFiles.isEmpty()) {
+                    throw new java.io.IOException("Upload verification failed - compressed file not found at destination");
+                }
+            } catch (com.jcraft.jsch.SftpException e) {
+                throw new java.io.IOException("Upload verification failed - compressed file not accessible at destination");
+            }
+            
+            // Remove original file only after successful compression and upload
+            sftpChannel.rm(sourceFile);
+            logger.debug("Removed original file: {}", sourceFile);
+            
+            return finalTargetPath;
+            
+        } catch (Exception e) {
+            logger.error("Error during remote file compression: {} -> {}", sourceFile, targetPath, e);
+            throw new RuntimeException("Remote file compression failed: " + e.getMessage(), e);
+        } finally {
+            // Clean up temporary files
+            cleanupTempFile(tempSourceFile);
+            cleanupTempFile(tempCompressedFile);
+        }
+    }
+    
+    /**
+     * Safely clean up temporary file
+     */
+    private void cleanupTempFile(String filePath) {
+        try {
+            java.io.File file = new java.io.File(filePath);
+            if (file.exists() && !file.delete()) {
+                logger.warn("Failed to delete temporary file: {}", filePath);
+                // Try to mark for deletion on exit as fallback
+                file.deleteOnExit();
+            }
+        } catch (Exception e) {
+            logger.warn("Error cleaning up temporary file {}: {}", filePath, e.getMessage());
+        }
+    }
+    
+    /**
+     * Compress file using GZIP compression
+     */
+    private void compressFileGzip(String sourceFile, String targetFile) throws Exception {
+        java.io.File source = new java.io.File(sourceFile);
+        if (!source.exists()) {
+            throw new java.io.FileNotFoundException("Source file not found: " + sourceFile);
+        }
+        
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(source);
+             java.io.FileOutputStream fos = new java.io.FileOutputStream(targetFile);
+             java.util.zip.GZIPOutputStream gzos = new java.util.zip.GZIPOutputStream(fos)) {
+            
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            long totalBytesRead = 0;
+            
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                gzos.write(buffer, 0, bytesRead);
+                totalBytesRead += bytesRead;
+            }
+            
+            // Ensure all data is flushed
+            gzos.finish();
+            
+            logger.debug("GZIP compression complete: {} bytes -> {} ({})", 
+                        totalBytesRead, new java.io.File(targetFile).length(), targetFile);
+            
+        } catch (java.io.IOException e) {
+            // Clean up partially created file on error
+            new java.io.File(targetFile).delete();
+            throw new RuntimeException("GZIP compression failed: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Compress file using ZIP compression
+     */
+    private void compressFileZip(String sourceFile, String targetFile, String entryName) throws Exception {
+        java.io.File source = new java.io.File(sourceFile);
+        if (!source.exists()) {
+            throw new java.io.FileNotFoundException("Source file not found: " + sourceFile);
+        }
+        
+        if (entryName == null || entryName.trim().isEmpty()) {
+            entryName = source.getName();
+        }
+        
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(source);
+             java.io.FileOutputStream fos = new java.io.FileOutputStream(targetFile);
+             java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(fos)) {
+            
+            // Set compression level for better performance/size balance
+            zos.setLevel(java.util.zip.Deflater.DEFAULT_COMPRESSION);
+            
+            java.util.zip.ZipEntry zipEntry = new java.util.zip.ZipEntry(entryName);
+            zipEntry.setTime(source.lastModified());
+            zos.putNextEntry(zipEntry);
+            
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            long totalBytesRead = 0;
+            
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                zos.write(buffer, 0, bytesRead);
+                totalBytesRead += bytesRead;
+            }
+            
+            zos.closeEntry();
+            zos.finish();
+            
+            logger.debug("ZIP compression complete: {} bytes -> {} ({})", 
+                        totalBytesRead, new java.io.File(targetFile).length(), targetFile);
+            
+        } catch (java.io.IOException e) {
+            // Clean up partially created file on error
+            new java.io.File(targetFile).delete();
+            throw new RuntimeException("ZIP compression failed: " + e.getMessage(), e);
+        }
+    }
+    
+    private String getCompressionExtension(String compressionType) {
+        switch (compressionType.toUpperCase()) {
+            case "GZIP":
+            case "GZ":
+                return ".gz";
+            case "ZIP":
+                return ".zip";
+            default:
+                return "";
+        }
     }
 }

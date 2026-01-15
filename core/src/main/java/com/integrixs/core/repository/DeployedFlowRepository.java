@@ -89,13 +89,13 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
+            FROM deployed_flows
             ORDER BY deployed_at DESC
         """;
-        
+
         return jdbcTemplate.query(sql, this::mapDeployedFlow);
     }
     
@@ -110,14 +110,14 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
+            FROM deployed_flows
             WHERE deployment_status = ?
             ORDER BY deployed_at DESC
         """;
-        
+
         return jdbcTemplate.query(sql, this::mapDeployedFlow, status.name());
     }
     
@@ -132,21 +132,21 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
-            WHERE deployment_status = 'DEPLOYED' 
-            AND execution_enabled = true 
+            FROM deployed_flows
+            WHERE deployment_status = 'DEPLOYED'
+            AND execution_enabled = true
             AND runtime_status = 'ACTIVE'
             ORDER BY deployed_at DESC
         """;
-        
+
         return jdbcTemplate.query(sql, this::mapDeployedFlow);
     }
     
     /**
-     * Find deployed flow by flow ID
+     * Find deployed flow by flow ID (only DEPLOYED status)
      */
     public Optional<DeployedFlow> findByFlowId(UUID flowId) {
         String sql = """
@@ -156,21 +156,50 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
-            WHERE flow_id = ? 
+            FROM deployed_flows
+            WHERE flow_id = ?
             AND deployment_status = 'DEPLOYED'
-            ORDER BY deployed_at DESC 
+            ORDER BY deployed_at DESC
             LIMIT 1
         """;
-        
+
         try {
             DeployedFlow deployedFlow = jdbcTemplate.queryForObject(sql, this::mapDeployedFlow, flowId);
             return Optional.of(deployedFlow);
         } catch (EmptyResultDataAccessException e) {
             logger.debug("No deployed flow found for flow ID: {}", flowId);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Find any deployment record by flow ID (regardless of status)
+     * Used to check if re-deployment should update existing record
+     */
+    public Optional<DeployedFlow> findAnyByFlowId(UUID flowId) {
+        String sql = """
+            SELECT id, flow_id, flow_name, flow_version, deployment_status, deployment_environment,
+                   sender_adapter_id, sender_adapter_name, receiver_adapter_id, receiver_adapter_name,
+                   execution_enabled, runtime_status, max_concurrent_executions, execution_timeout_minutes,
+                   retry_policy, total_executions, successful_executions, failed_executions,
+                   last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
+                   last_error_at, last_error_message, consecutive_failures,
+                   flow_configuration,
+                   deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
+                   health_check_enabled, last_health_check_at, health_check_status, health_check_message
+            FROM deployed_flows
+            WHERE flow_id = ?
+            ORDER BY deployed_at DESC
+            LIMIT 1
+        """;
+
+        try {
+            DeployedFlow deployedFlow = jdbcTemplate.queryForObject(sql, this::mapDeployedFlow, flowId);
+            return Optional.of(deployedFlow);
+        } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
     }
@@ -187,15 +216,15 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
-            WHERE flow_id = ? 
+            FROM deployed_flows
+            WHERE flow_id = ?
             AND deployment_status = 'DEPLOYED'
             ORDER BY deployed_at DESC
         """;
-        
+
         try {
             List<DeployedFlow> deployedFlows = jdbcTemplate.query(sql, this::mapDeployedFlow, flowId);
             logger.debug("Found {} deployed flow instances for flow ID: {}", deployedFlows.size(), flowId);
@@ -217,13 +246,13 @@ public class DeployedFlowRepository {
                    retry_policy, total_executions, successful_executions, failed_executions,
                    last_execution_at, last_execution_status, last_execution_duration_ms, average_execution_time_ms,
                    last_error_at, last_error_message, consecutive_failures,
-                   flow_configuration, sender_adapter_config, receiver_adapter_config,
+                   flow_configuration,
                    deployed_at, deployed_by, undeployed_at, undeployed_by, deployment_notes,
                    health_check_enabled, last_health_check_at, health_check_status, health_check_message
-            FROM deployed_flows 
+            FROM deployed_flows
             WHERE id = ?
         """;
-        
+
         try {
             DeployedFlow deployedFlow = jdbcTemplate.queryForObject(sql, this::mapDeployedFlow, id);
             return Optional.of(deployedFlow);
@@ -239,17 +268,17 @@ public class DeployedFlowRepository {
         if (deployedFlow.getId() == null) {
             deployedFlow.setId(UUID.randomUUID());
         }
-        
+
         String sql = """
             INSERT INTO deployed_flows (
                 id, flow_id, flow_name, flow_version, deployment_status, deployment_environment,
                 sender_adapter_id, sender_adapter_name, receiver_adapter_id, receiver_adapter_name,
                 execution_enabled, runtime_status, max_concurrent_executions, execution_timeout_minutes,
-                retry_policy, flow_configuration, sender_adapter_config, receiver_adapter_config,
+                retry_policy, flow_configuration,
                 deployed_at, deployed_by, deployment_notes, health_check_enabled
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, ?)
         """;
-        
+
         jdbcTemplate.update(sql,
             deployedFlow.getId(),
             deployedFlow.getFlowId(),
@@ -267,21 +296,61 @@ public class DeployedFlowRepository {
             deployedFlow.getExecutionTimeoutMinutes(),
             convertMapToJson(deployedFlow.getRetryPolicy()),
             convertMapToJson(deployedFlow.getFlowConfiguration()),
-            convertMapToJson(deployedFlow.getSenderAdapterConfig()),
-            convertMapToJson(deployedFlow.getReceiverAdapterConfig()),
             deployedFlow.getDeployedAt(),
             deployedFlow.getDeployedBy(),
             deployedFlow.getDeploymentNotes(),
             deployedFlow.getHealthCheckEnabled()
         );
-        
+
         // Log audit trail
-        auditService.logDatabaseOperation("INSERT", "deployed_flows", deployedFlow.getId(), 
+        auditService.logDatabaseOperation("INSERT", "deployed_flows", deployedFlow.getId(),
             deployedFlow.getDisplayName(), true, null);
-        
+
         return deployedFlow.getId();
     }
-    
+
+    /**
+     * Re-deploy a previously undeployed flow (update existing record)
+     */
+    public void redeploy(DeployedFlow deployedFlow) {
+        String sql = """
+            UPDATE deployed_flows SET
+                flow_name = ?, flow_version = ?,
+                deployment_status = ?, runtime_status = ?,
+                sender_adapter_id = ?, sender_adapter_name = ?,
+                receiver_adapter_id = ?, receiver_adapter_name = ?,
+                execution_enabled = ?, max_concurrent_executions = ?, execution_timeout_minutes = ?,
+                flow_configuration = ?::jsonb,
+                deployed_at = ?, deployed_by = ?,
+                undeployed_at = NULL, undeployed_by = NULL,
+                health_check_enabled = ?
+            WHERE id = ?
+        """;
+
+        jdbcTemplate.update(sql,
+            deployedFlow.getFlowName(),
+            deployedFlow.getFlowVersion(),
+            deployedFlow.getDeploymentStatus().name(),
+            deployedFlow.getRuntimeStatus().name(),
+            deployedFlow.getSenderAdapterId(),
+            deployedFlow.getSenderAdapterName(),
+            deployedFlow.getReceiverAdapterId(),
+            deployedFlow.getReceiverAdapterName(),
+            deployedFlow.getExecutionEnabled(),
+            deployedFlow.getMaxConcurrentExecutions(),
+            deployedFlow.getExecutionTimeoutMinutes(),
+            convertMapToJson(deployedFlow.getFlowConfiguration()),
+            deployedFlow.getDeployedAt(),
+            deployedFlow.getDeployedBy(),
+            deployedFlow.getHealthCheckEnabled(),
+            deployedFlow.getId()
+        );
+
+        // Log audit trail
+        auditService.logDatabaseOperation("UPDATE", "deployed_flows", deployedFlow.getId(),
+            "Re-deployed: " + deployedFlow.getDisplayName(), true, null);
+    }
+
     /**
      * Update deployed flow
      */
@@ -431,8 +500,6 @@ public class DeployedFlowRepository {
         deployedFlow.setConsecutiveFailures(rs.getInt("consecutive_failures"));
         
         deployedFlow.setFlowConfiguration(convertJsonToMap(rs.getString("flow_configuration")));
-        deployedFlow.setSenderAdapterConfig(convertJsonToMap(rs.getString("sender_adapter_config")));
-        deployedFlow.setReceiverAdapterConfig(convertJsonToMap(rs.getString("receiver_adapter_config")));
         
         Timestamp deployedAt = rs.getTimestamp("deployed_at");
         if (deployedAt != null) {

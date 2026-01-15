@@ -1,24 +1,23 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { 
+import {
   LayoutDashboard,
   Settings,
   Activity,
   ChevronLeft,
   ChevronRight,
-  Boxes,
-  Workflow,
   BarChart3,
-  Database
+  Database,
+  Package
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
+import { useSidebar } from '@/contexts/SidebarContext'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
-  { name: 'Adapters', href: '/adapters', icon: Boxes, adminOnly: true, section: 'integration' },
-  { name: 'Flow Management', href: '/flows', icon: Workflow, adminOnly: true, section: 'integration' },
+  { name: 'Package Library', href: '/packages', icon: Package, adminOnly: true, section: 'integration' },
   { name: 'Adapter Monitoring', href: '/adapter-monitoring', icon: Activity, section: 'monitoring' },
   { name: 'Flow Monitoring', href: '/flow-monitoring', icon: BarChart3, section: 'monitoring' },
   { name: 'Administration', href: '/admin', icon: Database, adminOnly: true, section: 'system' },
@@ -26,7 +25,7 @@ const navigation = [
 ]
 
 const Sidebar: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, toggle } = useSidebar()
   const { user } = useAuthStore()
 
   const isAdmin = user?.role === 'ADMINISTRATOR'
@@ -45,7 +44,7 @@ const Sidebar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggle}
             className="ml-auto flex transition-all duration-300 hover:scale-110 hover:bg-accent/50"
           >
             {collapsed ? (
